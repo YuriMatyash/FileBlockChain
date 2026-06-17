@@ -41,6 +41,45 @@ async function assertReverts(promise, expectedMessage) {
   assert.fail(`Expected transaction to revert with ${expectedMessage}`);
 }
 
+function collectErrorData(error, values = []) {
+  if (!error || typeof error !== "object") {
+    return values;
+  }
+
+  if (typeof error.data === "string") {
+    values.push(error.data);
+  }
+
+  if (typeof error.info?.error?.data === "string") {
+    values.push(error.info.error.data);
+  }
+
+  if (typeof error.error?.data === "string") {
+    values.push(error.error.data);
+  }
+
+  if (error.cause && error.cause !== error) {
+    collectErrorData(error.cause, values);
+  }
+
+  return values;
+}
+
+async function assertRevertsWithSelector(promise, expectedSelector) {
+  try {
+    await promise;
+  } catch (error) {
+    const revertDataValues = collectErrorData(error);
+    assert.ok(
+      revertDataValues.some((data) => data.toLowerCase().startsWith(expectedSelector.toLowerCase())),
+      `Expected revert selector ${expectedSelector}, received ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`
+    );
+    return;
+  }
+
+  assert.fail(`Expected transaction to revert with selector ${expectedSelector}`);
+}
+
 describe("PrintLicenseNFT", function () {
   let provider;
   let deployer;
@@ -128,9 +167,11 @@ describe("PrintLicenseNFT", function () {
   it("restricts direct wallet-to-wallet transfers", async function () {
     const { tokenId } = await mintExampleLicense(nft, creator);
 
-    await assertReverts(
+    const directTransfersRestrictedSelector = nft.interface.getError("DirectTransfersRestricted").selector;
+
+    await assertRevertsWithSelector(
       nft.connect(creator).transferFrom(await creator.getAddress(), await buyer.getAddress(), tokenId),
-      "DirectTransfersRestricted"
+      directTransfersRestrictedSelector
     );
 
     assert.equal(await nft.ownerOf(tokenId), await creator.getAddress());
