@@ -1,6 +1,9 @@
 const assert = require("node:assert/strict");
 const hre = require("hardhat");
-const { ContractFactory, BrowserProvider, parseEther, ZeroAddress } = require("ethers");
+const { ContractFactory, BrowserProvider, id, parseEther, ZeroAddress } = require("ethers");
+
+const ERC20_INVALID_RECEIVER_SELECTOR = id("ERC20InvalidReceiver(address)").slice(0, 10);
+const OWNABLE_UNAUTHORIZED_ACCOUNT_SELECTOR = id("OwnableUnauthorizedAccount(address)").slice(0, 10);
 
 async function deployPrintToken(initialSupply) {
   const provider = new BrowserProvider(hre.network.provider);
@@ -13,15 +16,51 @@ async function deployPrintToken(initialSupply) {
   return { provider, deployer, token };
 }
 
-async function assertRejectsWith(promise, message) {
+function collectErrorData(error, values = []) {
+  if (!error || typeof error !== "object") {
+    return values;
+  }
+
+  if (typeof error.data === "string") {
+    values.push(error.data);
+  }
+
+  if (typeof error.error?.data === "string") {
+    values.push(error.error.data);
+  }
+
+  if (typeof error.info?.error?.data === "string") {
+    values.push(error.info.error.data);
+  }
+
+  if (Array.isArray(error.errors)) {
+    for (const nestedError of error.errors) {
+      collectErrorData(nestedError, values);
+    }
+  }
+
+  if (error.cause) {
+    collectErrorData(error.cause, values);
+  }
+
+  return values;
+}
+
+async function assertRevertsWithSelector(promise, expectedSelector) {
   try {
     await promise;
   } catch (error) {
-    assert.match(error.message, message);
+    const revertData = collectErrorData(error);
+    const serializedError = JSON.stringify(error, Object.getOwnPropertyNames(error));
+
+    assert.ok(
+      revertData.some((data) => data.startsWith(expectedSelector)) || serializedError.includes(expectedSelector),
+      `Expected revert selector ${expectedSelector}, but received: ${JSON.stringify(revertData)}`
+    );
     return;
   }
 
-  assert.fail("Expected transaction to revert");
+  assert.fail(`Expected transaction to revert with selector ${expectedSelector}`);
 }
 
 describe("PrintToken", function () {
@@ -71,20 +110,26 @@ describe("PrintToken", function () {
   });
 
   it("prevents non-owners from minting reward tokens", async function () {
+    const recipientAddress = await recipient.getAddress();
     const rewardAmount = parseEther("100");
 
-    await assertRejectsWith(
-      token.connect(nonOwner).mintReward(await recipient.getAddress(), rewardAmount),
-      /OwnableUnauthorizedAccount/
+    await assertRevertsWithSelector(
+      token.connect(nonOwner).mintReward(recipientAddress, rewardAmount),
+      OWNABLE_UNAUTHORIZED_ACCOUNT_SELECTOR
     );
+
+    assert.equal(await token.balanceOf(recipientAddress), 0n);
+    assert.equal(await token.totalSupply(), initialSupply);
   });
 
   it("prevents minting rewards to the zero address", async function () {
     const rewardAmount = parseEther("100");
 
-    await assertRejectsWith(
+    await assertRevertsWithSelector(
       token.mintReward(ZeroAddress, rewardAmount),
-      /ERC20InvalidReceiver/
+      ERC20_INVALID_RECEIVER_SELECTOR
     );
+
+    assert.equal(await token.totalSupply(), initialSupply);
   });
 });
