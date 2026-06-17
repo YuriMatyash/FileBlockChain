@@ -2,14 +2,14 @@
 
 PrintChain is a Web3 DApp marketplace for digital manufacturing files. Each NFT in the finished project will represent a license to use, print, or manufacture the digital model/file.
 
-> Current status: **Phase 2**. The repository now includes the `PrintToken` ERC20 reward token and the `PrintLicenseNFT` ERC721 manufacturing/use license NFT with minting, IPFS CID metadata storage, and on-chain ownership history. Marketplace, IPFS upload, frontend, and x402 functionality are intentionally not implemented yet.
+> Current status: **Phase 3**. The repository now includes the `PrintToken` ERC20 reward token, the `PrintLicenseNFT` ERC721 manufacturing/use license NFT, and the `PrintMarketplace` ETH marketplace with enforced 10% creator royalties, controlled NFT transfers, listing lifecycle, and sale history updates. IPFS upload, frontend marketplace UI, deployment scripts, and x402 functionality are intentionally not implemented yet.
 
 ## Project structure
 
 ```text
-contracts/              Solidity contracts, including PrintToken and PrintLicenseNFT
+contracts/              Solidity contracts, including PrintToken, PrintLicenseNFT, and PrintMarketplace
 scripts/                Hardhat deployment and demo seed scripts
-test/                   Smart contract tests for PrintToken and PrintLicenseNFT
+test/                   Smart contract tests for PrintToken, PrintLicenseNFT, and PrintMarketplace
 frontend/               Vite + React frontend using web3.js
 backend/                Placeholder backend for the optional x402 demo
 docs/                   Setup, demo, and planning documentation
@@ -89,9 +89,9 @@ npm run backend:start
 
 ## Phase boundaries
 
-Phase 2 intentionally does not include:
+Phase 3 intentionally does not include:
 
-- marketplace implementation
+- frontend marketplace implementation
 - IPFS upload implementation
 - x402 payment verification
 - real deployment or testnet configuration
@@ -100,7 +100,7 @@ Those features will be added in later phases only.
 
 ## Phase 1 — PrintToken reward token
 
-`PrintToken` (`PRINT`) is the ERC20 reward token for PrintChain. It is intended for creator and buyer participation rewards in later phases, not as the primary marketplace payment currency. NFT license purchases will be implemented later through ETH-based marketplace flows and the x402-style demo.
+`PrintToken` (`PRINT`) is the ERC20 reward token for PrintChain. It is intended for creator and buyer participation rewards, not as the primary marketplace payment currency. Phase 3 marketplace purchases use ETH.
 
 The Phase 1 contract mints an initial supply to the deployer and lets only the contract owner mint additional reward tokens with `mintReward(address to, uint256 amount)`.
 
@@ -109,4 +109,13 @@ The Phase 1 contract mints an initial supply to the deployer and lets only the c
 
 `PrintLicenseNFT` (`PML`) is an ERC721 token where each NFT represents a license to use, print, or manufacture the digital model/file. The contract stores license metadata such as title, description, creator address, IPFS file CID, metadata CID/token URI, creation timestamp, suggested initial price, and ownership/license history. It does not store the manufacturing file itself on-chain.
 
-Direct wallet-to-wallet NFT transfer is intentionally restricted because creator royalties must be enforced by the marketplace in a later phase. Minting is allowed, and the contract owner or a configured future transfer controller can perform controlled transfers for later marketplace integration. Phase 2 does not implement marketplace buying, ETH payments, IPFS upload logic, x402, or frontend UI.
+Direct wallet-to-wallet NFT transfer is intentionally restricted because creator royalties must be enforced by the marketplace. Minting is allowed, and the contract owner or configured marketplace transfer controller can perform controlled transfers. Phase 2 did not implement marketplace buying, ETH payments, IPFS upload logic, x402, or frontend UI.
+
+
+## Phase 3 — PrintMarketplace ETH sales and royalties
+
+`PrintMarketplace` lets license NFT owners list manufacturing/use license NFTs for sale in ETH, cancel their own listings, and sell to buyers who send the exact listed ETH price. PRINT remains a reward token and is not used as the marketplace purchase currency.
+
+The marketplace enforces the project royalty rule during its own purchase flow: 10% of every sale is paid to the original creator/designer recorded in `PrintLicenseNFT`, and 90% is paid to the current seller. ERC2981-style royalty information may be exposed by the NFT contract, but royalty enforcement for this project happens inside the PrintChain marketplace purchase function.
+
+Direct wallet-to-wallet NFT transfers remain restricted. Marketplace purchases use the NFT controlled transfer mechanism so each sale records a `SALE` ownership history entry with the previous owner, new owner, ETH price, and timestamp. Listings are cleared after cancellation or purchase.
