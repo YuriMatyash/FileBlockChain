@@ -2,14 +2,14 @@
 
 PrintChain is a Web3 DApp marketplace for digital manufacturing files. Each NFT in the finished project will represent a license to use, print, or manufacture the digital model/file.
 
-> Current status: **Phase 0 only**. The repository contains project structure, development tooling, and placeholders. ERC20, NFT, marketplace, IPFS, and x402 functionality are intentionally not implemented yet.
+> Current status: **Phase 1**. The repository now includes the `PrintToken` ERC20 reward token and its unit tests. NFT, marketplace, IPFS, and x402 functionality are intentionally not implemented yet.
 
 ## Project structure
 
 ```text
-contracts/              Solidity contracts, added in later phases
+contracts/              Solidity contracts, including the Phase 1 PrintToken reward token
 scripts/                Hardhat deployment and demo seed scripts
-test/                   Smart contract tests, added by contract phase
+test/                   Smart contract tests, including PrintToken unit tests
 frontend/               Vite + React frontend using web3.js
 backend/                Placeholder backend for the optional x402 demo
 docs/                   Setup, demo, and planning documentation
@@ -86,7 +86,6 @@ npm run backend:start
 
 Phase 0 intentionally does not include:
 
-- `PrintToken` ERC20 implementation
 - license NFT implementation
 - marketplace implementation
 - IPFS upload implementation
@@ -94,3 +93,10 @@ Phase 0 intentionally does not include:
 - real deployment or testnet configuration
 
 Those features will be added in later phases only.
+
+
+## Phase 1 — PrintToken reward token
+
+`PrintToken` (`PRINT`) is the ERC20 reward token for PrintChain. It is intended for creator and buyer participation rewards in later phases, not as the primary marketplace payment currency. NFT license purchases will be implemented later through ETH-based marketplace flows and the x402-style demo.
+
+The Phase 1 contract mints an initial supply to the deployer and lets only the contract owner mint additional reward tokens with `mintReward(address to, uint256 amount)`.
