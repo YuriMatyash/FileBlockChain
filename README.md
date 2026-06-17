@@ -2,7 +2,7 @@
 
 PrintChain is a Web3 DApp marketplace for digital manufacturing files. Each NFT in the finished project will represent a license to use, print, or manufacture the digital model/file.
 
-> Current status: **Phase 3**. The repository now includes the `PrintToken` ERC20 reward token, the `PrintLicenseNFT` ERC721 manufacturing/use license NFT, and the `PrintMarketplace` ETH marketplace with enforced 10% creator royalties, controlled NFT transfers, listing lifecycle, and sale history updates. IPFS upload, frontend marketplace UI, deployment scripts, and x402 functionality are intentionally not implemented yet.
+> Current status: **Phase 4**. The repository now includes local deployment and demo seed scripts for `PrintToken`, `PrintLicenseNFT`, and `PrintMarketplace`. The deploy script configures the NFT transfer controller and writes frontend-readable local contract addresses/ABIs to `frontend/src/config/contracts.json`. IPFS upload, frontend marketplace UI, testnet deployment, and x402 functionality are intentionally not implemented yet.
 
 ## Project structure
 
@@ -89,12 +89,12 @@ npm run backend:start
 
 ## Phase boundaries
 
-Phase 3 intentionally does not include:
+Phase 4 intentionally does not include:
 
 - frontend marketplace implementation
 - IPFS upload implementation
 - x402 payment verification
-- real deployment or testnet configuration
+- Sepolia, mainnet, real private keys, seed phrases, API keys, or secrets
 
 Those features will be added in later phases only.
 
@@ -119,3 +119,31 @@ Direct wallet-to-wallet NFT transfer is intentionally restricted because creator
 The marketplace enforces the project royalty rule during its own purchase flow: 10% of every sale is paid to the original creator/designer recorded in `PrintLicenseNFT`, and 90% is paid to the current seller. ERC2981-style royalty information may be exposed by the NFT contract, but royalty enforcement for this project happens inside the PrintChain marketplace purchase function.
 
 Direct wallet-to-wallet NFT transfers remain restricted. Marketplace purchases use the NFT controlled transfer mechanism so each sale records a `SALE` ownership history entry with the previous owner, new owner, ETH price, and timestamp. Listings are cleared after cancellation or purchase.
+
+## Phase 4 — Local deployment and demo seed
+
+Phase 4 adds local Hardhat deployment support only. The deployment script deploys `PrintToken`, `PrintLicenseNFT`, and `PrintMarketplace` in order, then authorizes the marketplace as the NFT transfer controller by calling `setTransferController`. This keeps the stronger transfer model from earlier phases: normal wallet-to-wallet license transfers are restricted, while marketplace sales can update on-chain ownership history.
+
+Run a local node first:
+
+```bash
+npm run node
+```
+
+Deploy to the local node from a second terminal:
+
+```bash
+npm run deploy:local
+```
+
+The deploy script prints deployed addresses and writes a frontend-readable config file at `frontend/src/config/contracts.json` containing local addresses and ABIs. This config is for local development only and must not be treated as mainnet or production configuration.
+
+To create demo data after deployment, run:
+
+```bash
+npm run seed:local
+```
+
+The seed script reads the generated config, mints demo PRINT rewards to a local creator account, mints one sample manufacturing/use license NFT with fake IPFS CIDs, and lists it for sale in ETH through the marketplace. No real IPFS upload happens in Phase 4.
+
+`PRINT` remains a reward token contract. Marketplace purchases use local test ETH, not PRINT.

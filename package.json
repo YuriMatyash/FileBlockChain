@@ -10,7 +10,9 @@
     "frontend:install": "npm install --prefix frontend",
     "frontend:start": "npm run dev --prefix frontend",
     "backend:install": "npm install --prefix backend",
-    "backend:start": "npm start --prefix backend"
+    "backend:start": "npm start --prefix backend",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "seed:local": "hardhat run scripts/seed-demo.js --network localhost"
   },
   "devDependencies": {
     "hardhat": "^2.22.19",
