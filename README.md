@@ -2,14 +2,14 @@
 
 PrintChain is a Web3 DApp marketplace for digital manufacturing files. Each NFT in the finished project will represent a license to use, print, or manufacture the digital model/file.
 
-> Current status: **Phase 1**. The repository now includes the `PrintToken` ERC20 reward token and its unit tests. NFT, marketplace, IPFS, and x402 functionality are intentionally not implemented yet.
+> Current status: **Phase 2**. The repository now includes the `PrintToken` ERC20 reward token and the `PrintLicenseNFT` ERC721 manufacturing/use license NFT with minting, IPFS CID metadata storage, and on-chain ownership history. Marketplace, IPFS upload, frontend, and x402 functionality are intentionally not implemented yet.
 
 ## Project structure
 
 ```text
-contracts/              Solidity contracts, including the Phase 1 PrintToken reward token
+contracts/              Solidity contracts, including PrintToken and PrintLicenseNFT
 scripts/                Hardhat deployment and demo seed scripts
-test/                   Smart contract tests, including PrintToken unit tests
+test/                   Smart contract tests for PrintToken and PrintLicenseNFT
 frontend/               Vite + React frontend using web3.js
 backend/                Placeholder backend for the optional x402 demo
 docs/                   Setup, demo, and planning documentation
@@ -84,9 +84,8 @@ npm run backend:start
 
 ## Phase boundaries
 
-Phase 0 intentionally does not include:
+Phase 2 intentionally does not include:
 
-- license NFT implementation
 - marketplace implementation
 - IPFS upload implementation
 - x402 payment verification
@@ -94,9 +93,15 @@ Phase 0 intentionally does not include:
 
 Those features will be added in later phases only.
 
-
 ## Phase 1 — PrintToken reward token
 
 `PrintToken` (`PRINT`) is the ERC20 reward token for PrintChain. It is intended for creator and buyer participation rewards in later phases, not as the primary marketplace payment currency. NFT license purchases will be implemented later through ETH-based marketplace flows and the x402-style demo.
 
 The Phase 1 contract mints an initial supply to the deployer and lets only the contract owner mint additional reward tokens with `mintReward(address to, uint256 amount)`.
+
+
+## Phase 2 — PrintLicenseNFT manufacturing/use licenses
+
+`PrintLicenseNFT` (`PML`) is an ERC721 token where each NFT represents a license to use, print, or manufacture the digital model/file. The contract stores license metadata such as title, description, creator address, IPFS file CID, metadata CID/token URI, creation timestamp, suggested initial price, and ownership/license history. It does not store the manufacturing file itself on-chain.
+
+Direct wallet-to-wallet NFT transfer is intentionally restricted because creator royalties must be enforced by the marketplace in a later phase. Minting is allowed, and the contract owner or a configured future transfer controller can perform controlled transfers for later marketplace integration. Phase 2 does not implement marketplace buying, ETH payments, IPFS upload logic, x402, or frontend UI.
