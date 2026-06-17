@@ -33,18 +33,7 @@ function formatTimestamp(value) {
   return new Date(seconds * 1000).toLocaleString();
 }
 
-function parseManualMetadata(description = "") {
-  const readLine = (label) => {
-    const line = description.split("\n").find((item) => item.toLowerCase().startsWith(`${label.toLowerCase()}:`));
-    return line ? line.slice(label.length + 1).trim() : "";
-  };
-  return {
-    summary: description.split("\n\n")[0] || description,
-    fileType: readLine("File type"),
-    category: readLine("Category"),
-    preview: readLine("Preview")
-  };
-}
+const PHASE_5_METADATA_NOTE = "Not stored as a dedicated on-chain field yet. Add it to the metadata JSON/IPFS record in the next phase.";
 
 function App() {
   const [web3, setWeb3] = useState(null);
@@ -120,11 +109,10 @@ function App() {
       nft.methods.getOwnershipHistory(tokenId).call().catch(() => [])
     ]);
     const metadataText = info.metadataCid || tokenUri;
-    const manualMetadata = parseManualMetadata(info.description || "");
     return {
       tokenId: info.tokenId?.toString?.() || tokenId.toString(),
       title: info.title || `Manufacturing/use license #${tokenId}`,
-      description: manualMetadata.summary || "No summary entered yet.",
+      description: info.description || "No summary entered yet.",
       fileCid: info.fileCid,
       metadataCid: metadataText,
       tokenUri,
@@ -140,9 +128,9 @@ function App() {
         timestamp: item.timestamp?.toString?.() || item.timestamp,
         actionType: item.actionType
       })),
-      fileType: manualMetadata.fileType || "Demo/manual metadata",
-      category: manualMetadata.category || "Demo/manual metadata",
-      preview: manualMetadata.preview && manualMetadata.preview !== "none" ? manualMetadata.preview : ""
+      fileType: "",
+      category: "",
+      preview: ""
     };
   }, [contracts.PrintLicenseNFT, web3]);
 
@@ -189,13 +177,12 @@ function App() {
     if (!contracts.PrintLicenseNFT || !account || wrongNetwork) return;
     setStatus("Submitting mint transaction...");
     const metadataUri = mintForm.metadataCid.startsWith("ipfs://") ? mintForm.metadataCid : `ipfs://${mintForm.metadataCid}`;
-    const description = `${mintForm.description}\n\nFile type: ${mintForm.fileType}\nCategory: ${mintForm.category}\nPreview: ${mintForm.preview || "none"}`;
     const initialPrice = web3.utils.toWei(mintForm.initialPriceEth || "0", "ether");
     await contracts.PrintLicenseNFT.methods
-      .mintLicense(mintForm.title, description, mintForm.fileCid, mintForm.metadataCid, metadataUri, initialPrice)
+      .mintLicense(mintForm.title, mintForm.description, mintForm.fileCid, mintForm.metadataCid, metadataUri, initialPrice)
       .send({ from: account });
     setMintForm(EMPTY_FORM);
-    setStatus("License NFT minted. Reminder: CIDs were entered manually; real IPFS upload is a later phase.");
+    setStatus("License NFT minted. Reminder: CIDs were entered manually; real IPFS upload and richer metadata fields are later phases.");
     await refreshData();
   };
 
@@ -257,12 +244,12 @@ function App() {
 function LicenseCard({ license, web3, account, onSelect, onBuy, onCancel }) {
   const seller = license.listing?.seller;
   const isSeller = account && seller?.toLowerCase() === account.toLowerCase();
-  return <article className="listing-card"><div className="preview">{license.preview ? <img src={ipfsUrl(license.preview)} alt="License preview" /> : <span>No preview image yet</span>}</div><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType}</p><p><strong>Category:</strong> {license.category}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
+  return <article className="listing-card"><div className="preview">{license.preview ? <img src={ipfsUrl(license.preview)} alt="License preview" /> : <span>No preview image yet</span>}</div><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType || PHASE_5_METADATA_NOTE}</p><p><strong>Category:</strong> {license.category || PHASE_5_METADATA_NOTE}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
 }
 
 function MintForm({ form, setForm, onSubmit, disabled }) {
   const update = (key, value) => setForm({ ...form, [key]: value });
-  return <article><h2>Mint license NFT</h2><p className="note">Phase 5 uses manually entered demo CIDs/token URIs. Real IPFS upload is not implemented yet.</p><form onSubmit={onSubmit} className="form"><input required placeholder="Title" value={form.title} onChange={(e) => update("title", e.target.value)} /><textarea required placeholder="Description / documentation text" value={form.description} onChange={(e) => update("description", e.target.value)} /><input required placeholder="File type, e.g. STL" value={form.fileType} onChange={(e) => update("fileType", e.target.value)} /><input required placeholder="Category, e.g. CNC" value={form.category} onChange={(e) => update("category", e.target.value)} /><input required placeholder="File CID" value={form.fileCid} onChange={(e) => update("fileCid", e.target.value)} /><input required placeholder="Metadata CID or tokenURI" value={form.metadataCid} onChange={(e) => update("metadataCid", e.target.value)} /><input placeholder="Optional preview image CID or URL" value={form.preview} onChange={(e) => update("preview", e.target.value)} /><input required placeholder="Suggested initial price in ETH" value={form.initialPriceEth} onChange={(e) => update("initialPriceEth", e.target.value)} /><button disabled={disabled} type="submit">Mint manufacturing/use license</button></form></article>;
+  return <article><h2>Mint license NFT</h2><p className="note">Phase 5 uses manually entered demo CIDs/token URIs. Real IPFS upload is not implemented yet. File type, category, and preview are shown here as metadata planning fields; the current Solidity contract stores title, description, file CID, metadata CID/tokenURI, creator, timestamp, owner history, and prices.</p><form onSubmit={onSubmit} className="form"><input required placeholder="Title" value={form.title} onChange={(e) => update("title", e.target.value)} /><textarea required placeholder="Description / documentation text" value={form.description} onChange={(e) => update("description", e.target.value)} /><input required placeholder="File type for metadata, e.g. STL" value={form.fileType} onChange={(e) => update("fileType", e.target.value)} /><input required placeholder="Category for metadata, e.g. CNC" value={form.category} onChange={(e) => update("category", e.target.value)} /><input required placeholder="File CID" value={form.fileCid} onChange={(e) => update("fileCid", e.target.value)} /><input required placeholder="Metadata CID or tokenURI" value={form.metadataCid} onChange={(e) => update("metadataCid", e.target.value)} /><input placeholder="Optional preview image CID or URL for metadata" value={form.preview} onChange={(e) => update("preview", e.target.value)} /><input required placeholder="Suggested initial price in ETH" value={form.initialPriceEth} onChange={(e) => update("initialPriceEth", e.target.value)} /><button disabled={disabled} type="submit">Mint manufacturing/use license</button></form></article>;
 }
 
 function LicenseDetails({ license, web3 }) {
