@@ -87,6 +87,24 @@ Start the placeholder backend:
 npm run backend:start
 ```
 
+
+## Product display and metadata clarification
+
+Before Phase 5 frontend work begins, marketplace listings should be treated as buyer-facing manufacturing/use license offers, not as bare token IDs or wallet-address records. The future UI should help buyers understand what file/license they are buying by showing human-readable fields such as title, short summary, longer description or documentation, file type, category, optional preview image/render, file CID, metadata CID/token URI, creator/designer, seller/current owner, ETH price, ownership history, price history, and timestamps.
+
+The preview image/render can be manually provided by the creator for now. Automatic STL/3D preview generation and automatic file summarization are intentionally out of scope. If no preview image exists, the later frontend should show a simple placeholder.
+
+The core on-chain fields should remain minimal and important. `PrintLicenseNFT` already stores contract-readable license fields needed for Phase 5, while extra display-only content such as long documentation, software/tool compatibility, assembly notes, or a documentation CID can live in the ERC721 metadata JSON on IPFS and be displayed by the frontend later.
+
+Intended ERC721 metadata JSON fields include:
+
+- `name` for the license title
+- `description` for a buyer-facing summary
+- `image` for an optional preview image/render CID or URL
+- `external_url` or another file reference for the protected/source file CID
+- `attributes` for file type, category, license type, and optional software/tool compatibility
+- optional `documentation` text or `documentation_cid` for longer instructions, notes, or manufacturing documentation
+
 ## Phase boundaries
 
 Phase 4 intentionally does not include:

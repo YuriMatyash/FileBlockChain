@@ -106,22 +106,26 @@ or:
 PrintLicenseNFT.sol
 ```
 
-Each NFT should store or expose:
+Each NFT should store or expose enough human-readable display information that buyers understand the manufacturing/use license being listed, not just the token ID and wallet addresses. The current contracts should keep core on-chain fields minimal and important; extra display fields can live in the ERC721 metadata JSON on IPFS and be rendered by the frontend later.
+
+Core on-chain or contract-readable fields should include:
 
 - token ID
-- original creator address
+- original creator/designer address
 - current owner
 - title
-- description
+- short summary or description
 - category
 - file type
 - IPFS file CID
 - IPFS metadata CID or tokenURI
-- optional preview image/render CID
+- optional preview image/render CID or URL
 - mint timestamp
 - original price
 - ownership history
 - price history
+
+Additional buyer-facing details can be stored in metadata JSON/IPFS, including longer documentation, software/tool compatibility, assembly notes, license notes, or a documentation CID. Do not add contract storage just to duplicate display-only metadata if the current contracts already expose the fields needed for Phase 5 marketplace cards and details.
 
 The NFT should support ERC2981 royalties.
 
@@ -225,14 +229,16 @@ The blockchain should store only:
 - price records
 - timestamps
 
-Metadata JSON should follow a simple ERC721-compatible structure:
+Metadata JSON should follow a simple ERC721-compatible structure and should provide the human-readable listing information used by future marketplace screens:
 
 ```json
 {
   "name": "Example 3D Model License",
-  "description": "License for using and manufacturing this model.",
+  "description": "Short buyer-facing summary of the manufacturing/use license.",
   "image": "ipfs://PREVIEW_IMAGE_CID",
   "external_url": "ipfs://FILE_CID",
+  "documentation": "Longer text documentation, instructions, or license notes entered by the creator.",
+  "documentation_cid": "ipfs://OPTIONAL_DOCUMENTATION_CID",
   "attributes": [
     {
       "trait_type": "File Type",
@@ -245,10 +251,16 @@ Metadata JSON should follow a simple ERC721-compatible structure:
     {
       "trait_type": "License Type",
       "value": "Manufacturing/Use License"
+    },
+    {
+      "trait_type": "Software Compatibility",
+      "value": "Fusion 360, PrusaSlicer"
     }
   ]
 }
 ```
+
+The preview image/render can be manually provided by the creator for now. Do not implement automatic STL/3D preview generation yet. If no preview image is available, the frontend should eventually show a simple placeholder. Automatic file summarization is not required; documentation can be creator-entered text or a documentation CID in metadata.
 
 Do not commit real Pinata keys or any private API keys.
 
@@ -305,16 +317,19 @@ Frontend pages/screens:
 
 Shows active license NFTs for sale.
 
-Display:
+Display each marketplace listing as a clear manufacturing/use license offering, not just a token ID and wallet addresses. Buyer-facing listing cards or rows should eventually show:
 
 - title
-- preview image/render if available
-- file type
-- category
-- creator address
-- seller address
+- short summary
+- preview image/render if available, or a simple placeholder when absent
+- file type, such as STL, STEP, 3MF, CNC, ZIP, or PDF
+- category, such as 3D Printing, CNC, Technical Drawing, or Assembly Instructions
+- creator/designer address
+- current owner/seller address
 - price in ETH
 - buy button
+
+Detailed views should also show the longer description/documentation, file CID, metadata CID/tokenURI, ownership history, price history, and timestamps.
 
 ### Upload / Mint License
 
