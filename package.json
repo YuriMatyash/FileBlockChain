@@ -1,0 +1,22 @@
+{
+  "name": "printchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PrintChain DApp workspace for a manufacturing license NFT marketplace.",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "frontend:install": "npm install --prefix frontend",
+    "frontend:start": "npm run dev --prefix frontend",
+    "backend:install": "npm install --prefix backend",
+    "backend:start": "npm start --prefix backend"
+  },
+  "devDependencies": {
+    "hardhat": "^2.22.19"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.2.0",
+    "dotenv": "^16.4.7"
+  }
+}
