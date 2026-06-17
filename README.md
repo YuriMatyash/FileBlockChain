@@ -56,6 +56,11 @@ cp backend/.env.example backend/.env
 
 All values are placeholders. Do not commit real private keys, seed phrases, API keys, or mainnet configuration.
 
+
+## Solidity compiler target
+
+The local Hardhat compiler targets the Cancun EVM while keeping Solidity `0.8.28`. This is required because OpenZeppelin Contracts 5.x utilities can compile to bytecode that uses Cancun-compatible instructions such as `MCOPY`. No real deployment keys, Sepolia RPC URLs, mainnet settings, or secrets are included in this configuration.
+
 ## Run commands
 
 Compile the Solidity project:
