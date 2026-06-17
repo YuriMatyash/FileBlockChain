@@ -11,7 +11,7 @@ async function deployContract(name, signer, args = []) {
 }
 
 async function deployFixture() {
-  const provider = new BrowserProvider(hre.network.provider);
+  const provider = new BrowserProvider(hre.network.provider, undefined, { cacheTimeout: -1 });
   const deployer = await provider.getSigner(0);
   const creator = await provider.getSigner(1);
   const buyer = await provider.getSigner(2);
