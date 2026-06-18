@@ -34,6 +34,7 @@ function formatTimestamp(value) {
 }
 
 const METADATA_FALLBACK_NOTE = "Not available in metadata yet; showing on-chain fallback where possible.";
+const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:4000";
 
 function isActiveListing(listing) {
   return Boolean(listing?.active);
@@ -301,7 +302,7 @@ function App() {
   return (
     <main className="app-shell">
       <section className="hero panel">
-        <p className="eyebrow">PrintChain Phase 7</p>
+        <p className="eyebrow">PrintChain Phase 8</p>
         <h1>Manufacturing/use license NFT marketplace</h1>
         <p>Each NFT represents a license to use, print, or manufacture the digital model/file. Purchases use ETH through PrintMarketplace; PRINT is a reward token.</p>
         <button onClick={connectWallet}>{account ? "Wallet connected" : "Connect MetaMask"}</button>
@@ -377,10 +378,34 @@ function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadat
   </form></article>;
 }
 
+
+function X402PreviewDemo({ tokenId }) {
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const requestPreview = async (paid = false) => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/paid-preview/${tokenId}`, {
+        headers: paid ? { "x-printchain-demo-payment": "paid" } : {}
+      });
+      const body = await response.json().catch(() => ({ message: "No JSON response returned." }));
+      setResult({ status: response.status, ok: response.ok, body, paid });
+    } catch (error) {
+      setResult({ status: "network-error", ok: false, body: { message: error.message, hint: `Start the backend with npm run backend. Expected ${BACKEND_BASE_URL}.` }, paid });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return <section className="x402-demo"><h4>x402 / HTTP 402 protected preview demo</h4><p className="note">This is a mocked x402-style local demo. It proves the HTTP 402 flow for protected license preview data, but it does not perform real payment settlement. NFT purchases still happen with ETH through PrintMarketplace.</p><button disabled={loading} onClick={() => requestPreview(false)}>Request unpaid preview (expect 402)</button><button disabled={loading} className="secondary" onClick={() => requestPreview(true)}>Mock pay / authorize demo access</button>{result && <div className={result.ok ? "status" : result.status === 402 ? "warning" : "error"}><p><strong>Response:</strong> {result.status} {result.ok ? "OK" : result.status === 402 ? "Payment Required" : "Error"}</p><pre>{JSON.stringify(result.body, null, 2)}</pre></div>}</section>;
+}
+
 function LicenseDetails({ license, web3 }) {
   const listed = isActiveListing(license.listing);
   const saleHistory = license.history?.filter((item) => item.actionType === "SALE") || [];
-  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} warning={license.previewWarning} /></div><p>{license.description}</p><p className="status"><strong>Listing status:</strong> {listed ? `Listed for ${web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH by ${shortAddress(license.listing.seller)}` : "Not currently listed"}</p><p className="note"><strong>Royalty:</strong> PrintMarketplace enforces a 10% payment to the original creator/designer on marketplace sales. ERC2981 exposes royalty information, but this demo enforces payment in the marketplace buy flow.</p><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p>{license.previewWarning && <p className="warning"><strong>Preview note:</strong> {license.previewWarning}</p>}<p><strong>Mint timestamp:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership history</h4>{license.history?.length ? <ol className="history-list">{license.history.map((item, index) => <li key={index}><strong>{actionLabel(item.actionType)}</strong><br />{shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)}<br />Price: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH<br />Time: {formatTimestamp(item.timestamp)}</li>)}</ol> : <p>No ownership history available.</p>}<h4>Sale / price history</h4>{saleHistory.length ? <ol className="history-list">{saleHistory.map((item, index) => <li key={index}><strong>SALE #{index + 1}</strong>: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}. Creator royalty was 10%; seller received the remaining 90%.</li>)}</ol> : <p>No marketplace sale history yet. The MINT record above shows the initial suggested price.</p>}</div>;
+  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} warning={license.previewWarning} /></div><p>{license.description}</p><p className="status"><strong>Listing status:</strong> {listed ? `Listed for ${web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH by ${shortAddress(license.listing.seller)}` : "Not currently listed"}</p><p className="note"><strong>Royalty:</strong> PrintMarketplace enforces a 10% payment to the original creator/designer on marketplace sales. ERC2981 exposes royalty information, but this demo enforces payment in the marketplace buy flow.</p><X402PreviewDemo tokenId={license.tokenId} /><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p>{license.previewWarning && <p className="warning"><strong>Preview note:</strong> {license.previewWarning}</p>}<p><strong>Mint timestamp:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership history</h4>{license.history?.length ? <ol className="history-list">{license.history.map((item, index) => <li key={index}><strong>{actionLabel(item.actionType)}</strong><br />{shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)}<br />Price: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH<br />Time: {formatTimestamp(item.timestamp)}</li>)}</ol> : <p>No ownership history available.</p>}<h4>Sale / price history</h4>{saleHistory.length ? <ol className="history-list">{saleHistory.map((item, index) => <li key={index}><strong>SALE #{index + 1}</strong>: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}. Creator royalty was 10%; seller received the remaining 90%.</li>)}</ol> : <p>No marketplace sale history yet. The MINT record above shows the initial suggested price.</p>}</div>;
 }
 
 

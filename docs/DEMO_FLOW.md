@@ -21,3 +21,56 @@ No automatic STL/3D preview generation, IPFS upload flow, x402 route, or fronten
 9. List, cancel, and buy flows continue to use the existing ETH marketplace behavior.
 
 Do not demonstrate x402 in Phase 6; that is reserved for Phase 8.
+
+## Phase 8 x402 / HTTP 402 protected preview demo
+
+Phase 8 demonstrates a small x402-style access gate for protected manufacturing/use license preview data. It is intentionally a mock local flow so the core PrintChain marketplace stays focused on license NFTs, ETH purchases, royalties, PRINT rewards, and history.
+
+### What is real
+
+1. `GET /api/paid-preview/:tokenId` exists in the backend.
+2. Requests without mock payment proof return HTTP `402 Payment Required` with JSON explaining how to provide demo proof.
+3. Requests with accepted mock proof return protected preview/download information for the selected token.
+4. The frontend license details view can trigger both the unpaid and mock-paid requests.
+
+### What is mocked
+
+- Payment verification is mocked with either the `x-printchain-demo-payment: paid` header or the `?demoPaid=true` query parameter.
+- No real x402 settlement, payment facilitator, API keys, secrets, private keys, or real funds are used.
+- Returned preview CIDs are demo values.
+- Marketplace NFT purchases remain real smart-contract calls on the local Hardhat network using ETH through `PrintMarketplace`; this backend route does not buy or transfer NFTs.
+
+### Run and test
+
+1. Install and start the backend:
+
+   ```bash
+   npm install --prefix backend
+   npm run backend
+   ```
+
+2. Confirm health:
+
+   ```bash
+   curl http://127.0.0.1:4000/health
+   ```
+
+3. Confirm unpaid protected access returns `402`:
+
+   ```bash
+   curl -i http://127.0.0.1:4000/api/paid-preview/1
+   ```
+
+4. Confirm mock-paid access returns protected JSON:
+
+   ```bash
+   curl -i -H "x-printchain-demo-payment: paid" http://127.0.0.1:4000/api/paid-preview/1
+   ```
+
+5. Start the frontend:
+
+   ```bash
+   npm run frontend
+   ```
+
+6. Select any license NFT details view. Click **Request unpaid preview (expect 402)**, then click **Mock pay / authorize demo access** to show the successful protected response.
