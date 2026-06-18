@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Web3 from "web3";
 import "./styles.css";
-import { fetchMetadata, rememberMockMetadata, toGatewayUrl, toIpfsUri, uploadFile, uploadMetadata } from "./ipfs/uploadAdapter";
+import { fetchMetadata, fileToDataUrl, rememberMockMetadata, toGatewayUrl, toIpfsUri, uploadFile, uploadMetadata } from "./ipfs/uploadAdapter";
 
 const EXPECTED_CHAIN_ID = 31337;
 const EMPTY_FORM = {
@@ -198,7 +198,7 @@ function App() {
       let previewMode = mintForm.preview ? "manual" : "none";
       if (mintForm.previewFile) {
         const previewResult = await uploadFile(mintForm.previewFile, "preview-image");
-        previewUri = previewResult.uri;
+        previewUri = previewResult.mode === "mock" ? await fileToDataUrl(mintForm.previewFile) : previewResult.uri;
         previewMode = previewResult.mode;
       }
 
@@ -297,10 +297,17 @@ function App() {
   );
 }
 
+function LicensePreview({ src, alt = "License preview" }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (!src || failed) return <div className="preview placeholder"><span>No preview image available</span></div>;
+  return <div className="preview"><img src={toGatewayUrl(src)} alt={alt} onError={() => setFailed(true)} /></div>;
+}
+
 function LicenseCard({ license, web3, account, onSelect, onBuy, onCancel }) {
   const seller = license.listing?.seller;
   const isSeller = account && seller?.toLowerCase() === account.toLowerCase();
-  return <article className="listing-card"><div className="preview">{license.preview ? <img src={toGatewayUrl(license.preview)} alt="License preview" /> : <span>No preview image provided</span>}</div><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
+  return <article className="listing-card"><LicensePreview src={license.preview} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
 }
 
 function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadata }) {
@@ -326,7 +333,7 @@ function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadat
 }
 
 function LicenseDetails({ license, web3 }) {
-  return <div className="details"><h3>{license.title}</h3>{license.preview && <div className="preview detail-preview"><img src={toGatewayUrl(license.preview)} alt="License preview" /></div>}<p>{license.description}</p><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p><p><strong>Created:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership/license history</h4>{license.history?.length ? <ul>{license.history.map((item, index) => <li key={index}>{item.actionType}: {shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)} for {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}</li>)}</ul> : <p>No history available.</p>}</div>;
+  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} /></div><p>{license.description}</p><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p><p><strong>Created:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership/license history</h4>{license.history?.length ? <ul>{license.history.map((item, index) => <li key={index}>{item.actionType}: {shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)} for {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}</li>)}</ul> : <p>No history available.</p>}</div>;
 }
 
 createRoot(document.getElementById("root")).render(<App />);

@@ -14,13 +14,13 @@ async function sha256CidLike(input) {
 
 export function toIpfsUri(cidOrUri) {
   if (!cidOrUri) return "";
-  if (cidOrUri.startsWith("ipfs://") || cidOrUri.startsWith("http://") || cidOrUri.startsWith("https://")) return cidOrUri;
+  if (cidOrUri.startsWith("ipfs://") || cidOrUri.startsWith("http://") || cidOrUri.startsWith("https://") || cidOrUri.startsWith("data:")) return cidOrUri;
   return `ipfs://${cidOrUri}`;
 }
 
 export function toGatewayUrl(cidOrUri) {
   if (!cidOrUri) return "";
-  if (cidOrUri.startsWith("http://") || cidOrUri.startsWith("https://")) return cidOrUri;
+  if (cidOrUri.startsWith("http://") || cidOrUri.startsWith("https://") || cidOrUri.startsWith("data:")) return cidOrUri;
   return `${IPFS_GATEWAY.replace(/\/$/, "")}/${normalizeCid(cidOrUri)}`;
 }
 
@@ -36,6 +36,15 @@ async function uploadToBackend(payload, kind) {
   const response = await fetch(UPLOAD_ENDPOINT, { method: "POST", body });
   if (!response.ok) throw new Error(`Upload endpoint failed with HTTP ${response.status}`);
   return response.json();
+}
+
+export function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Could not read preview image"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export async function uploadFile(file, kind = "file") {
