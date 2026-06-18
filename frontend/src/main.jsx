@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Web3 from "web3";
 import "./styles.css";
-import { fetchMetadata, fileToDataUrl, rememberMockMetadata, toGatewayUrl, toIpfsUri, uploadFile, uploadMetadata } from "./ipfs/uploadAdapter";
+import { fetchMetadata, rememberMockMetadata, rememberMockPreview, toGatewayUrl, toIpfsUri, uploadFile, uploadMetadata } from "./ipfs/uploadAdapter";
 
 const EXPECTED_CHAIN_ID = 31337;
 const EMPTY_FORM = {
@@ -150,7 +150,8 @@ function App() {
       fileType: attributeValue(metadata, "File Type"),
       category: attributeValue(metadata, "Category"),
       compatibility: attributeValue(metadata, "Software/Tool Compatibility"),
-      preview: metadata?.image || "",
+      preview: metadata?.previewDisplayUri || metadata?.image || "",
+      previewWarning: metadata?.previewWarning || metadata?.previewStorageNote || "",
       documentation: metadata?.documentation || metadata?.documentation_cid || "",
       uploadMode: metadata?.uploadMode || (metadataText?.includes("mock-") ? "mock" : "ipfs")
     };
@@ -209,11 +210,20 @@ function App() {
       setUploadStatus(`File reference ready (${fileResult.mode} mode): ${fileResult.cid}`);
 
       let previewUri = mintForm.preview ? toIpfsUri(mintForm.preview) : "";
+      let previewDisplayUri = previewUri;
       let previewMode = mintForm.preview ? "manual" : "none";
+      let previewWarning = "";
       if (mintForm.previewFile) {
         const previewResult = await uploadFile(mintForm.previewFile, "preview-image");
-        previewUri = previewResult.mode === "mock" ? await fileToDataUrl(mintForm.previewFile) : previewResult.uri;
+        previewUri = previewResult.uri;
         previewMode = previewResult.mode;
+        if (previewResult.mode === "mock") {
+          const previewMemory = rememberMockPreview(previewResult.cid, mintForm.previewFile);
+          previewDisplayUri = previewMemory.displayUri;
+          previewWarning = previewMemory.warning;
+        } else {
+          previewDisplayUri = previewResult.uri;
+        }
       }
 
       const attributes = [
@@ -227,6 +237,9 @@ function App() {
         name: mintForm.title,
         description: mintForm.description,
         image: previewUri,
+        previewDisplayUri,
+        previewWarning,
+        previewStorageNote: "Mock/demo mode stores only lightweight local metadata. Large files/previews are not permanently stored in the browser.",
         external_url: fileResult.uri,
         fileCid: fileResult.cid,
         documentation: mintForm.documentation,
@@ -238,7 +251,10 @@ function App() {
       const metadataResult = mintForm.manualMode && mintForm.metadataCid
         ? { cid: mintForm.metadataCid.replace(/^ipfs:\/\//, ""), uri: toIpfsUri(mintForm.metadataCid), mode: "manual", metadata }
         : await uploadMetadata(metadata);
-      rememberMockMetadata(metadataResult.cid, metadata);
+      const storageResult = rememberMockMetadata(metadataResult.cid, metadata);
+      if (!storageResult.stored && metadataResult.mode === "mock") {
+        setUploadStatus("Mock metadata CID was generated, but browser session storage could not persist it. Minting will continue; large preview/file data was not stored.");
+      }
       setLastMetadata(metadata);
 
       setStatus("Submitting mint transaction with file CID and metadata tokenURI...");
@@ -247,7 +263,7 @@ function App() {
         .mintLicense(mintForm.title, mintForm.description, fileResult.cid, metadataResult.cid, metadataResult.uri, initialPrice)
         .send({ from: account });
       setMintForm(EMPTY_FORM);
-      setUploadStatus(`Mint used ${metadataResult.mode} metadata CIDs. ${metadataResult.mode === "mock" ? "These are demo CIDs, not real IPFS uploads." : ""}`);
+      setUploadStatus(`Mint used ${metadataResult.mode} metadata CIDs. ${metadataResult.mode === "mock" ? "These are demo CIDs, not real IPFS uploads. Mock/demo mode stores only lightweight local metadata. Large files/previews are not permanently stored in the browser." : ""} ${previewWarning}`);
       setStatus("License NFT minted with off-chain file and metadata references. Owned licenses are refreshing now.");
       await refreshData();
     } catch (error) {
@@ -319,29 +335,30 @@ function DemoHelp() {
   return <section className="panel help-panel"><h2>Phase 7 demo account guide</h2><p className="note">Use the local Hardhat accounts only. Do not use mainnet, Sepolia, private keys in source code, or real funds.</p><div className="grid three"><article><h3>1. Creator / seller</h3><p>Use Hardhat account #0 to connect MetaMask, mint a manufacturing/use license NFT, and list it for ETH.</p></article><article><h3>2. Buyer</h3><p>Switch MetaMask to Hardhat account #1, buy the listed license, then confirm owner, SALE history, and price history in details.</p></article><article><h3>3. Resale buyer</h3><p>Switch back to the new owner to relist, then buy from Hardhat account #2 to demonstrate the 10% creator royalty on resale.</p></article></div></section>;
 }
 
-function LicensePreview({ src, alt = "License preview" }) {
+function LicensePreview({ src, alt = "License preview", warning = "" }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
-  if (!src || failed) return <div className="preview placeholder"><span>No preview image available</span></div>;
-  return <div className="preview"><img src={toGatewayUrl(src)} alt={alt} onError={() => setFailed(true)} /></div>;
+  const imageSrc = src ? toGatewayUrl(src) : "";
+  if (!imageSrc || failed) return <div className="preview placeholder"><span>No preview image available</span>{warning && <small>{warning}</small>}</div>;
+  return <div className="preview"><img src={imageSrc} alt={alt} onError={() => setFailed(true)} /></div>;
 }
 
 function LicenseCard({ license, web3, account, onSelect, onBuy, onCancel }) {
   const seller = license.listing?.seller;
   const isSeller = account && seller?.toLowerCase() === account.toLowerCase();
-  return <article className="listing-card"><LicensePreview src={license.preview} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
+  return <article className="listing-card"><LicensePreview src={license.preview} warning={license.previewWarning} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
 }
 
 function OwnedLicenseCard({ license, web3, listPrice, onPriceChange, onList, onCancel, onSelect }) {
   const listed = isActiveListing(license.listing);
   const listingPrice = listed && web3 ? web3.utils.fromWei(license.listing.price, "ether") : null;
-  return <article className="listing-card owned-card"><LicensePreview src={license.preview} alt={`${license.title} preview`} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Current status:</strong> <span className={listed ? "badge listed" : "badge unlisted"}>{listed ? `Listed for ${listingPrice} ETH` : "Unlisted / held by connected wallet"}</span></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p>{listed ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel active listing</button> : <><input placeholder="List price in ETH" value={listPrice} onChange={(e) => onPriceChange(e.target.value)} /><button onClick={() => onList(license.tokenId)}>List for sale</button></>}<button className="secondary" onClick={() => onSelect(license)}>View details/history</button></article>;
+  return <article className="listing-card owned-card"><LicensePreview src={license.preview} alt={`${license.title} preview`} warning={license.previewWarning} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Current status:</strong> <span className={listed ? "badge listed" : "badge unlisted"}>{listed ? `Listed for ${listingPrice} ETH` : "Unlisted / held by connected wallet"}</span></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p>{listed ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel active listing</button> : <><input placeholder="List price in ETH" value={listPrice} onChange={(e) => onPriceChange(e.target.value)} /><button onClick={() => onList(license.tokenId)}>List for sale</button></>}<button className="secondary" onClick={() => onSelect(license)}>View details/history</button></article>;
 }
 
 function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadata }) {
   const update = (key, value) => setForm({ ...form, [key]: value });
   const requiresFile = !form.manualMode && !form.file;
-  return <article><h2>Upload and mint license NFT</h2><p className="note">Phase 6 creates ERC721 metadata for a manufacturing/use license. Mock/demo CIDs are generated when no backend IPFS upload endpoint is configured; they are clearly labeled and are not real IPFS uploads.</p><form onSubmit={onSubmit} className="form">
+  return <article><h2>Upload and mint license NFT</h2><p className="note">Phase 6 creates ERC721 metadata for a manufacturing/use license. Mock/demo CIDs are generated when no backend IPFS upload endpoint is configured; they are clearly labeled and are not real IPFS uploads.</p><p className="note">Mock/demo mode stores only lightweight local metadata. Large files/previews are not permanently stored in the browser.</p><form onSubmit={onSubmit} className="form">
     <label>Manufacturing file (STL, STEP, 3MF, CNC, ZIP, PDF, drawings)<input required={!form.manualMode} type="file" onChange={(e) => update("file", e.target.files?.[0] || null)} /></label>
     <label>Optional preview image/render<input type="file" accept="image/*" onChange={(e) => update("previewFile", e.target.files?.[0] || null)} /></label>
     <input required placeholder="Title" value={form.title} onChange={(e) => update("title", e.target.value)} />
@@ -363,7 +380,7 @@ function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadat
 function LicenseDetails({ license, web3 }) {
   const listed = isActiveListing(license.listing);
   const saleHistory = license.history?.filter((item) => item.actionType === "SALE") || [];
-  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} /></div><p>{license.description}</p><p className="status"><strong>Listing status:</strong> {listed ? `Listed for ${web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH by ${shortAddress(license.listing.seller)}` : "Not currently listed"}</p><p className="note"><strong>Royalty:</strong> PrintMarketplace enforces a 10% payment to the original creator/designer on marketplace sales. ERC2981 exposes royalty information, but this demo enforces payment in the marketplace buy flow.</p><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p><p><strong>Mint timestamp:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership history</h4>{license.history?.length ? <ol className="history-list">{license.history.map((item, index) => <li key={index}><strong>{actionLabel(item.actionType)}</strong><br />{shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)}<br />Price: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH<br />Time: {formatTimestamp(item.timestamp)}</li>)}</ol> : <p>No ownership history available.</p>}<h4>Sale / price history</h4>{saleHistory.length ? <ol className="history-list">{saleHistory.map((item, index) => <li key={index}><strong>SALE #{index + 1}</strong>: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}. Creator royalty was 10%; seller received the remaining 90%.</li>)}</ol> : <p>No marketplace sale history yet. The MINT record above shows the initial suggested price.</p>}</div>;
+  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} warning={license.previewWarning} /></div><p>{license.description}</p><p className="status"><strong>Listing status:</strong> {listed ? `Listed for ${web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH by ${shortAddress(license.listing.seller)}` : "Not currently listed"}</p><p className="note"><strong>Royalty:</strong> PrintMarketplace enforces a 10% payment to the original creator/designer on marketplace sales. ERC2981 exposes royalty information, but this demo enforces payment in the marketplace buy flow.</p><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p>{license.previewWarning && <p className="warning"><strong>Preview note:</strong> {license.previewWarning}</p>}<p><strong>Mint timestamp:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership history</h4>{license.history?.length ? <ol className="history-list">{license.history.map((item, index) => <li key={index}><strong>{actionLabel(item.actionType)}</strong><br />{shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)}<br />Price: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH<br />Time: {formatTimestamp(item.timestamp)}</li>)}</ol> : <p>No ownership history available.</p>}<h4>Sale / price history</h4>{saleHistory.length ? <ol className="history-list">{saleHistory.map((item, index) => <li key={index}><strong>SALE #{index + 1}</strong>: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}. Creator royalty was 10%; seller received the remaining 90%.</li>)}</ol> : <p>No marketplace sale history yet. The MINT record above shows the initial suggested price.</p>}</div>;
 }
 
 
