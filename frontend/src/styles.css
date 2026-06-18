@@ -80,3 +80,9 @@ input, textarea {
 }
 textarea { min-height: 110px; resize: vertical; }
 .details p, .details li { line-height: 1.5; }
+
+label { color: #33415f; font-weight: 700; }
+.checkbox { align-items: center; display: flex; gap: 0.5rem; }
+.checkbox input { width: auto; }
+pre { background: #101827; border-radius: 0.75rem; color: #e7eefc; overflow-x: auto; padding: 1rem; }
+.detail-preview { margin-bottom: 1rem; max-width: 420px; }
