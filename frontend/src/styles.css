@@ -107,3 +107,11 @@ pre { background: #101827; border-radius: 0.75rem; color: #e7eefc; overflow-x: a
   margin-top: 0.5rem;
   max-width: 90%;
 }
+.x402-demo {
+  background: #f8fbff;
+  border: 1px solid #cbd5ea;
+  border-radius: 0.85rem;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+.x402-demo pre { margin-bottom: 0; }

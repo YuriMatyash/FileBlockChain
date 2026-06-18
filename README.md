@@ -179,3 +179,59 @@ The default frontend behavior is safe mock/demo mode. If `VITE_IPFS_UPLOAD_ENDPO
 For real IPFS uploads, configure a backend proxy endpoint in `VITE_IPFS_UPLOAD_ENDPOINT` later. Do not put private IPFS API secrets in frontend environment files. The included environment examples contain placeholders only.
 
 Phase 6 intentionally does not implement x402, Sepolia/mainnet deployment, real private keys, seed phrases, or real provider secrets.
+
+## Phase 8 — x402 / HTTP 402 protected preview demo
+
+Phase 8 adds a small backend and frontend demonstration of HTTP `402 Payment Required` behavior for protected access to license-related preview data. The route is:
+
+```text
+GET /api/paid-preview/:tokenId
+```
+
+This is an **x402-style mock/demo** for local education only. It does not perform real x402 settlement, does not use real payment credentials, and does not replace the PrintChain marketplace purchase flow. Marketplace NFT purchases are still handled by `PrintMarketplace` with local test ETH, while `PRINT` remains a reward token.
+
+### What is real vs mocked
+
+- Real: the backend returns HTTP `402` with clear JSON when no payment proof is provided.
+- Real: the backend returns protected demo JSON when a mock payment proof is provided.
+- Mocked: the accepted payment proof is only `x-printchain-demo-payment: paid` or `?demoPaid=true`.
+- Mocked: returned protected preview CIDs/URLs are demo values, not real paid file delivery.
+
+### Run the backend
+
+```bash
+npm install --prefix backend
+npm run backend
+```
+
+The backend defaults to `http://127.0.0.1:4000`. Frontend requests use `VITE_BACKEND_URL` when provided, or that same local default.
+
+### Test the protected route manually
+
+Unpaid request, expected `402 Payment Required`:
+
+```bash
+curl -i http://127.0.0.1:4000/api/paid-preview/1
+```
+
+Mock-paid request with a demo header, expected `200 OK` and protected preview JSON:
+
+```bash
+curl -i -H "x-printchain-demo-payment: paid" http://127.0.0.1:4000/api/paid-preview/1
+```
+
+Mock-paid request with a query flag also works:
+
+```bash
+curl -i "http://127.0.0.1:4000/api/paid-preview/1?demoPaid=true"
+```
+
+### Frontend demo
+
+Start the DApp with:
+
+```bash
+npm run frontend
+```
+
+Open a license details view and use the **x402 / HTTP 402 protected preview demo** buttons. First request unpaid access to see the `402` JSON response, then click the mock authorization button to retry with the demo proof header and receive protected preview data.
