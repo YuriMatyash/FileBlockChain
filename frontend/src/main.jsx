@@ -35,6 +35,16 @@ function formatTimestamp(value) {
 
 const METADATA_FALLBACK_NOTE = "Not available in metadata yet; showing on-chain fallback where possible.";
 
+function isActiveListing(listing) {
+  return Boolean(listing?.active);
+}
+
+function actionLabel(actionType) {
+  if (actionType === "MINT") return "MINT — license created";
+  if (actionType === "SALE") return "SALE — marketplace purchase";
+  return actionType || "HISTORY";
+}
+
 function attributeValue(metadata, trait) {
   return metadata?.attributes?.find((item) => item.trait_type === trait)?.value || "";
 }
@@ -150,7 +160,9 @@ function App() {
     if (!web3 || !contracts.PrintMarketplace || !contracts.PrintLicenseNFT) return;
     setStatus("Loading marketplace and license data...");
     const active = await contracts.PrintMarketplace.methods.getActiveListings().call();
-    const readableListings = await Promise.all(active.filter((l) => l.active).map(async (listing) => {
+    const activeListings = active.filter((l) => isActiveListing(l));
+    const listingByTokenId = new Map(activeListings.map((listing) => [listing.tokenId.toString(), listing]));
+    const readableListings = await Promise.all(activeListings.map(async (listing) => {
       const license = await loadLicense(listing.tokenId, listing);
       return { ...license, listing };
     }));
@@ -163,7 +175,9 @@ function App() {
       for (const tokenId of tokenIds) {
         try {
           const owner = await contracts.PrintLicenseNFT.methods.ownerOf(tokenId).call();
-          if (owner.toLowerCase() === account.toLowerCase()) owned.push(await loadLicense(tokenId));
+          if (owner.toLowerCase() === account.toLowerCase()) {
+            owned.push(await loadLicense(tokenId, listingByTokenId.get(tokenId) || null));
+          }
         } catch (error) {
           // Ignore burned or unavailable demo tokens.
         }
@@ -234,7 +248,7 @@ function App() {
         .send({ from: account });
       setMintForm(EMPTY_FORM);
       setUploadStatus(`Mint used ${metadataResult.mode} metadata CIDs. ${metadataResult.mode === "mock" ? "These are demo CIDs, not real IPFS uploads." : ""}`);
-      setStatus("License NFT minted with off-chain file and metadata references.");
+      setStatus("License NFT minted with off-chain file and metadata references. Owned licenses are refreshing now.");
       await refreshData();
     } catch (error) {
       setStatus(`Mint/upload failed: ${error.message}`);
@@ -246,21 +260,23 @@ function App() {
     const priceEth = listPrices[tokenId] || "0.1";
     setStatus(`Listing license #${tokenId} for ${priceEth} ETH...`);
     await contracts.PrintMarketplace.methods.listLicense(tokenId, web3.utils.toWei(priceEth, "ether")).send({ from: account });
-    setStatus("License listed for ETH.");
+    setStatus("License listed for ETH. Marketplace and owned licenses are refreshing now.");
     await refreshData();
   };
 
   const cancelListing = async (tokenId) => {
     setStatus(`Canceling listing for license #${tokenId}...`);
     await contracts.PrintMarketplace.methods.cancelListing(tokenId).send({ from: account });
-    setStatus("Listing canceled.");
+    setStatus("Listing canceled. Marketplace and owned licenses are refreshing now.");
     await refreshData();
   };
 
   const buyLicense = async (license) => {
     setStatus(`Buying license #${license.tokenId} with ETH...`);
     await contracts.PrintMarketplace.methods.buyLicense(license.tokenId).send({ from: account, value: license.listing.price });
-    setStatus("Purchase complete. Marketplace enforced the creator royalty and transferred the license NFT.");
+    setStatus("Purchase complete. Marketplace enforced the creator royalty and transferred the license NFT. Marketplace, owned licenses, and details are refreshing now.");
+    const refreshed = await loadLicense(license.tokenId);
+    if (refreshed) setSelected(refreshed);
     await refreshData();
   };
 
@@ -269,7 +285,7 @@ function App() {
   return (
     <main className="app-shell">
       <section className="hero panel">
-        <p className="eyebrow">PrintChain Phase 6</p>
+        <p className="eyebrow">PrintChain Phase 7</p>
         <h1>Manufacturing/use license NFT marketplace</h1>
         <p>Each NFT represents a license to use, print, or manufacture the digital model/file. Purchases use ETH through PrintMarketplace; PRINT is a reward token.</p>
         <button onClick={connectWallet}>{account ? "Wallet connected" : "Connect MetaMask"}</button>
@@ -283,18 +299,24 @@ function App() {
         <article><h2>Contract debug info</h2>{addresses.length ? addresses.map(([name, data]) => <p key={name}><strong>{name}:</strong> <code>{data.address}</code></p>) : <p>No contract config loaded.</p>}</article>
       </section>
 
-      <section className="panel"><h2>Marketplace listings</h2><div className="card-grid">{listings.length ? listings.map((license) => <LicenseCard key={license.tokenId} license={license} web3={web3} account={account} onSelect={setSelected} onBuy={buyLicense} onCancel={cancelListing} />) : <p>No active license listings found.</p>}</div></section>
+      <DemoHelp />
+
+      <section className="panel"><h2>Marketplace listings</h2><p className="note">Active listings are license NFTs currently for sale with ETH. Sellers can cancel their own listings; buyers can purchase from another account.</p><div className="card-grid">{listings.length ? listings.map((license) => <LicenseCard key={license.tokenId} license={license} web3={web3} account={account} onSelect={setSelected} onBuy={buyLicense} onCancel={cancelListing} />) : <p>No active license listings found.</p>}</div></section>
 
       <section className="grid two">
         <MintForm form={mintForm} setForm={setMintForm} onSubmit={mintLicense} disabled={!account || wrongNetwork || !contracts.PrintLicenseNFT} uploadStatus={uploadStatus} lastMetadata={lastMetadata} />
         <article><h2>PRINT reward/token info</h2>{tokenInfo ? <><p><strong>Name:</strong> {tokenInfo.name}</p><p><strong>Symbol:</strong> {tokenInfo.symbol}</p><p><strong>Your balance:</strong> {tokenInfo.balance} {tokenInfo.symbol}</p></> : <p>Connect wallet to load PRINT reward token data.</p>}<p className="note">PRINT is displayed as a reward/loyalty token. Marketplace purchases in this phase use ETH.</p></article>
       </section>
 
-      <section className="panel"><h2>My licenses and listing controls</h2><div className="card-grid">{myLicenses.length ? myLicenses.map((license) => <article key={license.tokenId}><h3>{license.title}</h3><p>Token #{license.tokenId}</p><p>{license.description}</p><input placeholder="List price in ETH" value={listPrices[license.tokenId] || ""} onChange={(e) => setListPrices({ ...listPrices, [license.tokenId]: e.target.value })} /><button onClick={() => listLicense(license.tokenId)}>List for sale</button><button className="secondary" onClick={() => setSelected(license)}>View details/history</button></article>) : <p>No licenses owned by connected wallet were found from mint events.</p>}</div></section>
+      <section className="panel"><h2>My licenses and listing controls</h2><p className="note">Owned licenses are discovered from LicenseMinted events, checked with ownerOf, and matched with active marketplace listings. Use this section to list an unlisted license or cancel your active listing.</p><div className="card-grid">{myLicenses.length ? myLicenses.map((license) => <OwnedLicenseCard key={license.tokenId} license={license} web3={web3} listPrice={listPrices[license.tokenId] || ""} onPriceChange={(value) => setListPrices({ ...listPrices, [license.tokenId]: value })} onList={listLicense} onCancel={cancelListing} onSelect={setSelected} />) : <p>No licenses owned by connected wallet were found. Mint a license, buy one from the marketplace, or switch MetaMask to the account that owns the NFT.</p>}</div></section>
 
       <section className="panel"><h2>License details/history</h2>{selected ? <LicenseDetails license={selected} web3={web3} /> : <p>Select a marketplace card or owned license to view details.</p>}</section>
     </main>
   );
+}
+
+function DemoHelp() {
+  return <section className="panel help-panel"><h2>Phase 7 demo account guide</h2><p className="note">Use the local Hardhat accounts only. Do not use mainnet, Sepolia, private keys in source code, or real funds.</p><div className="grid three"><article><h3>1. Creator / seller</h3><p>Use Hardhat account #0 to connect MetaMask, mint a manufacturing/use license NFT, and list it for ETH.</p></article><article><h3>2. Buyer</h3><p>Switch MetaMask to Hardhat account #1, buy the listed license, then confirm owner, SALE history, and price history in details.</p></article><article><h3>3. Resale buyer</h3><p>Switch back to the new owner to relist, then buy from Hardhat account #2 to demonstrate the 10% creator royalty on resale.</p></article></div></section>;
 }
 
 function LicensePreview({ src, alt = "License preview" }) {
@@ -308,6 +330,12 @@ function LicenseCard({ license, web3, account, onSelect, onBuy, onCancel }) {
   const seller = license.listing?.seller;
   const isSeller = account && seller?.toLowerCase() === account.toLowerCase();
   return <article className="listing-card"><LicensePreview src={license.preview} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
+}
+
+function OwnedLicenseCard({ license, web3, listPrice, onPriceChange, onList, onCancel, onSelect }) {
+  const listed = isActiveListing(license.listing);
+  const listingPrice = listed && web3 ? web3.utils.fromWei(license.listing.price, "ether") : null;
+  return <article className="listing-card owned-card"><LicensePreview src={license.preview} alt={`${license.title} preview`} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Current status:</strong> <span className={listed ? "badge listed" : "badge unlisted"}>{listed ? `Listed for ${listingPrice} ETH` : "Unlisted / held by connected wallet"}</span></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p>{listed ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel active listing</button> : <><input placeholder="List price in ETH" value={listPrice} onChange={(e) => onPriceChange(e.target.value)} /><button onClick={() => onList(license.tokenId)}>List for sale</button></>}<button className="secondary" onClick={() => onSelect(license)}>View details/history</button></article>;
 }
 
 function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadata }) {
@@ -333,7 +361,10 @@ function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadat
 }
 
 function LicenseDetails({ license, web3 }) {
-  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} /></div><p>{license.description}</p><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p><p><strong>Created:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership/license history</h4>{license.history?.length ? <ul>{license.history.map((item, index) => <li key={index}>{item.actionType}: {shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)} for {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}</li>)}</ul> : <p>No history available.</p>}</div>;
+  const listed = isActiveListing(license.listing);
+  const saleHistory = license.history?.filter((item) => item.actionType === "SALE") || [];
+  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} /></div><p>{license.description}</p><p className="status"><strong>Listing status:</strong> {listed ? `Listed for ${web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH by ${shortAddress(license.listing.seller)}` : "Not currently listed"}</p><p className="note"><strong>Royalty:</strong> PrintMarketplace enforces a 10% payment to the original creator/designer on marketplace sales. ERC2981 exposes royalty information, but this demo enforces payment in the marketplace buy flow.</p><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p><p><strong>Mint timestamp:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership history</h4>{license.history?.length ? <ol className="history-list">{license.history.map((item, index) => <li key={index}><strong>{actionLabel(item.actionType)}</strong><br />{shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)}<br />Price: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH<br />Time: {formatTimestamp(item.timestamp)}</li>)}</ol> : <p>No ownership history available.</p>}<h4>Sale / price history</h4>{saleHistory.length ? <ol className="history-list">{saleHistory.map((item, index) => <li key={index}><strong>SALE #{index + 1}</strong>: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}. Creator royalty was 10%; seller received the remaining 90%.</li>)}</ol> : <p>No marketplace sale history yet. The MINT record above shows the initial suggested price.</p>}</div>;
 }
+
 
 createRoot(document.getElementById("root")).render(<App />);
