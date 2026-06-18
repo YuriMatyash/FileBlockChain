@@ -165,3 +165,17 @@ npm run seed:local
 The seed script reads the generated config, mints demo PRINT rewards to a local creator account, mints one sample manufacturing/use license NFT with fake IPFS CIDs, and lists it for sale in ETH through the marketplace. No real IPFS upload happens in Phase 4.
 
 `PRINT` remains a reward token contract. Marketplace purchases use local test ETH, not PRINT.
+
+## Phase 6 — Upload and metadata flow
+
+Phase 6 adds a creator upload form and metadata builder for manufacturing/use license NFTs. The frontend lets a creator select a manufacturing file, optionally select a preview image/render, enter title, summary, documentation text, file type, category, optional software/tool compatibility, and a suggested initial ETH price. It then builds ERC721-compatible metadata with `name`, `description`, `image`, `external_url`, `fileCid`, `documentation`, and attributes for file type, category, license type, and optional software/tool compatibility.
+
+The actual manufacturing file is still not stored on-chain. `PrintLicenseNFT` receives only the resulting file CID plus metadata CID/tokenURI. Marketplace purchases still use ETH through `PrintMarketplace`, and PRINT remains a reward/loyalty token.
+
+### IPFS and mock/demo mode
+
+The default frontend behavior is safe mock/demo mode. If `VITE_IPFS_UPLOAD_ENDPOINT` is empty, the upload adapter generates deterministic `mock-...` CID-like values in the browser. These mock CIDs are for local demos only and are not real IPFS uploads. The generated metadata is saved in browser session storage so the current frontend session can render richer marketplace cards and details.
+
+For real IPFS uploads, configure a backend proxy endpoint in `VITE_IPFS_UPLOAD_ENDPOINT` later. Do not put private IPFS API secrets in frontend environment files. The included environment examples contain placeholders only.
+
+Phase 6 intentionally does not implement x402, Sepolia/mainnet deployment, real private keys, seed phrases, or real provider secrets.
