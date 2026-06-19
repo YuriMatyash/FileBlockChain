@@ -60,6 +60,7 @@ function App() {
   const [status, setStatus] = useState("Ready. Connect MetaMask and deploy local contracts to begin.");
   const [listings, setListings] = useState([]);
   const [myLicenses, setMyLicenses] = useState([]);
+  const [createdSoldLicenses, setCreatedSoldLicenses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [tokenInfo, setTokenInfo] = useState(null);
   const [mintForm, setMintForm] = useState(EMPTY_FORM);
@@ -174,17 +175,24 @@ function App() {
       const events = await contracts.PrintLicenseNFT.getPastEvents("LicenseMinted", { fromBlock: 0, toBlock: "latest" }).catch(() => []);
       const tokenIds = [...new Set(events.map((event) => event.returnValues.tokenId?.toString()))].filter(Boolean);
       const owned = [];
+      const createdSold = [];
       for (const tokenId of tokenIds) {
         try {
-          const owner = await contracts.PrintLicenseNFT.methods.ownerOf(tokenId).call();
-          if (owner.toLowerCase() === account.toLowerCase()) {
-            owned.push(await loadLicense(tokenId, listingByTokenId.get(tokenId) || null));
+          const license = await loadLicense(tokenId, listingByTokenId.get(tokenId) || null);
+          if (!license) continue;
+          const ownerMatches = license.owner?.toLowerCase() === account.toLowerCase();
+          const creatorMatches = license.creator?.toLowerCase() === account.toLowerCase();
+          if (ownerMatches) {
+            owned.push(license);
+          } else if (creatorMatches) {
+            createdSold.push(license);
           }
         } catch (error) {
           // Ignore burned or unavailable demo tokens.
         }
       }
       setMyLicenses(owned.filter(Boolean));
+      setCreatedSoldLicenses(createdSold.filter(Boolean));
     }
 
     if (contracts.PrintToken && account) {
@@ -328,7 +336,9 @@ function App() {
         <article className="token-panel"><details open><summary>PRINT reward/token info</summary>{tokenInfo ? <div className="token-mini"><p><strong>Name:</strong> {tokenInfo.name}</p><p><strong>Symbol:</strong> {tokenInfo.symbol}</p><p><strong>Your balance:</strong> {tokenInfo.balance} {tokenInfo.symbol}</p></div> : <p>Connect wallet to load PRINT reward token data.</p>}<p className="note">PRINT proves the ERC20 reward-token requirement. Local marketplace purchases still use ETH through PrintMarketplace.</p></details></article>
       </section>
 
-      <section className="panel"><h2>My licenses and listing controls</h2><p className="note">Owned licenses are discovered from LicenseMinted events, checked with ownerOf, and matched with active marketplace listings. Use this section to list an unlisted license or cancel your active listing.</p><div className="card-grid">{myLicenses.length ? myLicenses.map((license) => <OwnedLicenseCard key={license.tokenId} license={license} web3={web3} listPrice={listPrices[license.tokenId] || ""} onPriceChange={(value) => setListPrices({ ...listPrices, [license.tokenId]: value })} onList={listLicense} onCancel={cancelListing} onSelect={setSelected} />) : <p>No licenses owned by connected wallet were found. Mint a license, buy one from the marketplace, or switch MetaMask to the account that owns the NFT.</p>}</div></section>
+      <section className="panel"><h2>My Owned Licenses ({myLicenses.length})</h2><p className="note">My Owned Licenses shows license NFTs currently owned by the connected wallet. Current owners can list, cancel active listings, sell through the marketplace, and view details/history from here.</p><div className="card-grid">{myLicenses.length ? myLicenses.map((license) => <OwnedLicenseCard key={license.tokenId} license={license} web3={web3} listPrice={listPrices[license.tokenId] || ""} onPriceChange={(value) => setListPrices({ ...listPrices, [license.tokenId]: value })} onList={listLicense} onCancel={cancelListing} onSelect={setSelected} />) : <p>No licenses currently owned by the connected wallet were found. Mint a license, buy one from the marketplace, or switch MetaMask to the account that owns the NFT.</p>}</div></section>
+
+      <section className="panel"><h2>Created & Sold Licenses ({createdSoldLicenses.length})</h2><p className="note">These are manufacturing/use license NFTs originally created by the connected wallet but now owned by someone else. This compact tracking section helps creators monitor circulation, resale history, and royalty-relevant events without mixing sold NFTs into owned-license controls.</p>{createdSoldLicenses.length ? <div className="sold-license-list">{createdSoldLicenses.map((license) => <CreatedSoldLicenseRow key={license.tokenId} license={license} web3={web3} onSelect={setSelected} />)}</div> : <p>No created-and-sold licenses found for the connected wallet. After another account buys one of your created NFTs, it will move out of My Owned Licenses and appear here for tracking.</p>}</section>
 
       <section className="panel"><h2>License details/history</h2>{selected ? <LicenseDetails license={selected} web3={web3} /> : <p>Select a marketplace card or owned license to view details.</p>}</section>
 
@@ -353,6 +363,23 @@ function LicenseCard({ license, web3, account, onSelect, onBuy, onCancel }) {
   const seller = license.listing?.seller;
   const isSeller = account && seller?.toLowerCase() === account.toLowerCase();
   return <article className="listing-card"><LicensePreview src={license.preview} warning={license.previewWarning} /><h3>{license.title}</h3><p>{license.description}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Creator:</strong> {shortAddress(license.creator)}</p><p><strong>Seller:</strong> {shortAddress(seller)}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Price:</strong> {web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH</p><button onClick={() => onSelect(license)}>Details</button>{isSeller ? <button className="secondary" onClick={() => onCancel(license.tokenId)}>Cancel listing</button> : <button disabled={!account} onClick={() => onBuy(license)}>Buy license</button>}</article>;
+}
+
+function lastSalePrice(license, web3) {
+  const saleHistory = license.history?.filter((item) => item.actionType === "SALE") || [];
+  const lastSale = saleHistory[saleHistory.length - 1];
+  if (!lastSale) return "No sale yet";
+  return `${web3 ? web3.utils.fromWei(lastSale.price || "0", "ether") : "—"} ETH`;
+}
+
+function CreatedSoldLicenseRow({ license, web3, onSelect }) {
+  const listed = isActiveListing(license.listing);
+  const listingPrice = listed && web3 ? web3.utils.fromWei(license.listing.price, "ether") : null;
+  const saleHistory = license.history?.filter((item) => item.actionType === "SALE") || [];
+  const summary = saleHistory.length
+    ? `${saleHistory.length} sale${saleHistory.length === 1 ? "" : "s"}; last sale ${lastSalePrice(license, web3)}`
+    : "No marketplace sale records yet";
+  return <details className="sold-license-row"><summary><span><strong>#{license.tokenId}</strong> — {license.title}</span><span>Owner: {shortAddress(license.owner)}</span><span className={listed ? "badge listed" : "badge unlisted"}>{listed ? "Listed" : "Unlisted"}</span><span>Last sale: {lastSalePrice(license, web3)}</span></summary><div className="sold-license-body"><div className="sold-license-preview"><LicensePreview src={license.preview} alt={`${license.title} preview`} warning={license.previewWarning} /></div><div><h3>{license.title}</h3><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Original creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>Current listing price:</strong> {listed ? `${listingPrice} ETH` : "Not listed"}</p><p><strong>File type/category:</strong> {license.fileType || METADATA_FALLBACK_NOTE} / {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Sale / price summary:</strong> {summary}</p><p className="note">You no longer own this NFT, but you created it and can still track circulation, resale history, and the 10% creator royalty events.</p><button className="secondary" onClick={() => onSelect(license)}>Open full details/history</button></div></div></details>;
 }
 
 function OwnedLicenseCard({ license, web3, listPrice, onPriceChange, onList, onCancel, onSelect }) {
@@ -410,7 +437,7 @@ function X402PreviewDemo({ tokenId }) {
 function LicenseDetails({ license, web3 }) {
   const listed = isActiveListing(license.listing);
   const saleHistory = license.history?.filter((item) => item.actionType === "SALE") || [];
-  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} warning={license.previewWarning} /></div><p>{license.description}</p><p className="status"><strong>Listing status:</strong> {listed ? `Listed for ${web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH by ${shortAddress(license.listing.seller)}` : "Not currently listed"}</p><p className="note"><strong>Royalty:</strong> PrintMarketplace enforces a 10% payment to the original creator/designer on marketplace sales. ERC2981 exposes royalty information, but this demo enforces payment in the marketplace buy flow.</p><X402PreviewDemo tokenId={license.tokenId} /><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p>{license.previewWarning && <p className="warning"><strong>Preview note:</strong> {license.previewWarning}</p>}<p><strong>Mint timestamp:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership history</h4>{license.history?.length ? <ol className="history-list">{license.history.map((item, index) => <li key={index}><strong>{actionLabel(item.actionType)}</strong><br />{shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)}<br />Price: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH<br />Time: {formatTimestamp(item.timestamp)}</li>)}</ol> : <p>No ownership history available.</p>}<h4>Sale / price history</h4>{saleHistory.length ? <ol className="history-list">{saleHistory.map((item, index) => <li key={index}><strong>SALE #{index + 1}</strong>: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}. Creator royalty was 10%; seller received the remaining 90%.</li>)}</ol> : <p>No marketplace sale history yet. The MINT record above shows the initial suggested price.</p>}</div>;
+  return <div className="details"><h3>{license.title}</h3><div className="detail-preview"><LicensePreview src={license.preview} warning={license.previewWarning} /></div><p>{license.description}</p><p className="status"><strong>Listing status:</strong> {listed ? `Listed for ${web3 ? web3.utils.fromWei(license.listing.price, "ether") : "—"} ETH by ${shortAddress(license.listing.seller)}` : "Not currently listed"}</p><p className="note"><strong>Royalty:</strong> PrintMarketplace enforces a 10% payment to the original creator/designer on marketplace sales. ERC2981 exposes royalty information, but this demo enforces payment in the marketplace buy flow.</p><X402PreviewDemo tokenId={license.tokenId} /><p><strong>Documentation:</strong> {license.documentation || "No documentation text/CID found in metadata."}</p><p><strong>File type:</strong> {license.fileType || METADATA_FALLBACK_NOTE}</p><p><strong>Category:</strong> {license.category || METADATA_FALLBACK_NOTE}</p><p><strong>Software/tool compatibility:</strong> {license.compatibility || "Not provided"}</p><p><strong>Token ID:</strong> {license.tokenId}</p><p><strong>Creator/designer:</strong> <code>{license.creator}</code></p><p><strong>Current owner:</strong> <code>{license.owner}</code></p><p><strong>Seller if listed:</strong> <code>{license.listing?.seller || "Not currently listed"}</code></p><p><strong>File CID:</strong> <code>{license.fileCid}</code></p><p><strong>Metadata CID / tokenURI:</strong> <code>{license.metadataCid || license.tokenUri}</code></p><p><strong>Upload mode:</strong> {license.uploadMode || "unknown"}</p>{license.previewWarning && <p className="warning"><strong>Preview note:</strong> {license.previewWarning}</p>}<p><strong>Mint timestamp:</strong> {formatTimestamp(license.createdAt)}</p><p><strong>Suggested initial price:</strong> {web3 ? web3.utils.fromWei(license.initialPrice || "0", "ether") : "—"} ETH</p><h4>Ownership history</h4>{license.history?.length ? <ol className="history-list">{license.history.map((item, index) => <li key={index}><strong>{actionLabel(item.actionType)}</strong><br />{shortAddress(item.previousOwner)} → {shortAddress(item.newOwner)}<br />Price: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH<br />Time: {formatTimestamp(item.timestamp)}</li>)}</ol> : <p>No ownership history available.</p>}<h4>Sale / price history</h4>{saleHistory.length ? <ol className="history-list">{saleHistory.map((item, index) => <li key={index}><strong>SALE #{index + 1}</strong>: {web3 ? web3.utils.fromWei(item.price || "0", "ether") : "—"} ETH at {formatTimestamp(item.timestamp)}. Marketplace resale sends 10% of the sale price to the original creator. Seller receives the remaining 90%.</li>)}</ol> : <p>No marketplace sale history yet. The MINT record above shows the initial suggested price.</p>}</div>;
 }
 
 

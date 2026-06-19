@@ -35,9 +35,14 @@ The NFT stores and exposes important license data such as creator/designer, titl
 
 Royalty enforcement is implemented in the PrintChain marketplace purchase flow. The current contract implementation does not claim that external marketplaces are forced to pay royalties; direct wallet-to-wallet transfers are restricted so normal ownership changes happen through the marketplace.
 
-### History and timestamps
+### History, timestamps, and creator tracking
 
 The NFT contract records ownership history entries for minting and marketplace sales. History records include previous owner, new owner, price, timestamp, and action type such as `MINT` or `SALE`. Listing timestamps are stored in the marketplace listing structure.
+
+The frontend separates creator and owner workflows:
+
+- **My Owned Licenses** shows NFTs currently owned by the connected wallet. Owners use this section to list a license for sale, cancel a listing, or open full details/history.
+- **Created & Sold Licenses** shows NFTs where the connected wallet is the original creator/designer but `ownerOf(tokenId)` is now another wallet. This section is compact and tracking-only, so sold/circulating NFTs do not appear in owner management controls. It helps creators monitor circulation, resale history, and royalty-relevant events after a license NFT leaves their wallet.
 
 ### IPFS/mock upload behavior
 
