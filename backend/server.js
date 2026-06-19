@@ -10,7 +10,7 @@ app.use(cors({ origin: process.env.FRONTEND_ORIGIN || "http://127.0.0.1:5173" })
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "printchain-backend", phase: 8, x402Demo: "mock" });
+  res.json({ status: "ok", service: "printchain-backend", phase: 9, x402Demo: "mock" });
 });
 
 app.get("/api/paid-preview/:tokenId", (req, res) => {

@@ -302,7 +302,7 @@ function App() {
   return (
     <main className="app-shell">
       <section className="hero panel">
-        <p className="eyebrow">PrintChain Phase 8</p>
+        <p className="eyebrow">PrintChain final local demo</p>
         <h1>Manufacturing/use license NFT marketplace</h1>
         <p>Each NFT represents a license to use, print, or manufacture the digital model/file. Purchases use ETH through PrintMarketplace; PRINT is a reward token.</p>
         <button onClick={connectWallet}>{account ? "Wallet connected" : "Connect MetaMask"}</button>
@@ -333,7 +333,7 @@ function App() {
 }
 
 function DemoHelp() {
-  return <section className="panel help-panel"><h2>Phase 7 demo account guide</h2><p className="note">Use the local Hardhat accounts only. Do not use mainnet, Sepolia, private keys in source code, or real funds.</p><div className="grid three"><article><h3>1. Creator / seller</h3><p>Use Hardhat account #0 to connect MetaMask, mint a manufacturing/use license NFT, and list it for ETH.</p></article><article><h3>2. Buyer</h3><p>Switch MetaMask to Hardhat account #1, buy the listed license, then confirm owner, SALE history, and price history in details.</p></article><article><h3>3. Resale buyer</h3><p>Switch back to the new owner to relist, then buy from Hardhat account #2 to demonstrate the 10% creator royalty on resale.</p></article></div></section>;
+  return <section className="panel help-panel"><h2>Final local demo account guide</h2><p className="note">Use the local Hardhat accounts only. Do not use mainnet, Sepolia, private keys in source code, or real funds.</p><div className="grid three"><article><h3>1. Creator / seller</h3><p>Use Hardhat account #1 to connect MetaMask, mint a manufacturing/use license NFT, and list it for ETH.</p></article><article><h3>2. Buyer</h3><p>Switch MetaMask to Hardhat account #2, buy the listed license, then confirm owner, SALE history, and price history in details.</p></article><article><h3>3. Resale buyer</h3><p>Switch back to the new owner to relist, then buy from Hardhat account #3 to demonstrate the 10% creator royalty on resale.</p></article></div></section>;
 }
 
 function LicensePreview({ src, alt = "License preview", warning = "" }) {
