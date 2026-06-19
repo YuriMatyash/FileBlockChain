@@ -67,7 +67,7 @@ async function main() {
   const salePrice = parseEther("1");
   await (await printMarketplace.listLicense(tokenId, salePrice)).wait();
   console.log(`Listed tokenId ${tokenId} for ${formatEther(salePrice)} ETH through PrintMarketplace`);
-  console.log("Seed complete. No real IPFS upload, x402, or frontend UI was added in Phase 4.");
+  console.log("Seed complete. Demo data uses fake/mock IPFS CIDs. The final project includes the frontend and mock x402 backend demo.");
 }
 
 main().catch((error) => {

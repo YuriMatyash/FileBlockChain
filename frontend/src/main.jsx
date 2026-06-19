@@ -19,7 +19,7 @@ const EMPTY_FORM = {
   previewFile: null,
   manualMode: false,
   uploadMode: "mock",
-  initialPriceEth: "0.1"
+  initialPriceEth: ""
 };
 
 function shortAddress(address) {
@@ -258,8 +258,13 @@ function App() {
       }
       setLastMetadata(metadata);
 
+      const initialPriceNumber = Number(mintForm.initialPriceEth);
+      if (!Number.isFinite(initialPriceNumber) || initialPriceNumber <= 0) {
+        throw new Error("Enter a valid positive suggested initial price in ETH.");
+      }
+
       setStatus("Submitting mint transaction with file CID and metadata tokenURI...");
-      const initialPrice = web3.utils.toWei(mintForm.initialPriceEth || "0", "ether");
+      const initialPrice = web3.utils.toWei(mintForm.initialPriceEth, "ether");
       await contracts.PrintLicenseNFT.methods
         .mintLicense(mintForm.title, mintForm.description, fileResult.cid, metadataResult.cid, metadataResult.uri, initialPrice)
         .send({ from: account });
@@ -311,29 +316,29 @@ function App() {
         {wrongNetwork && <p className="error">Wrong network: connected to chain {chainId}. Switch MetaMask to local Hardhat chain ID {EXPECTED_CHAIN_ID}.</p>}
       </section>
 
-      <section className="grid two">
-        <article><h2>Wallet status</h2><p><strong>Account:</strong> {account || "Not connected"}</p><p><strong>Chain ID:</strong> {chainId || "—"}</p><p><strong>Expected:</strong> {EXPECTED_CHAIN_ID}</p></article>
-        <article><h2>Contract debug info</h2>{addresses.length ? addresses.map(([name, data]) => <p key={name}><strong>{name}:</strong> <code>{data.address}</code></p>) : <p>No contract config loaded.</p>}</article>
+      <section className="grid two compact-grid">
+        <article><h2>Wallet status</h2><p><strong>Account:</strong> {account || "Not connected"}</p><p><strong>Chain ID:</strong> {chainId || "—"}</p><p><strong>Expected local chain:</strong> {EXPECTED_CHAIN_ID}</p></article>
+        <article className="debug-panel"><details><summary>Local contract addresses/debug info</summary>{addresses.length ? addresses.map(([name, data]) => <p key={name}><strong>{name}:</strong> <code>{data.address}</code></p>) : <p>No contract config loaded.</p>}</details></article>
       </section>
-
-      <DemoHelp />
 
       <section className="panel"><h2>Marketplace listings</h2><p className="note">Active listings are license NFTs currently for sale with ETH. Sellers can cancel their own listings; buyers can purchase from another account.</p><div className="card-grid">{listings.length ? listings.map((license) => <LicenseCard key={license.tokenId} license={license} web3={web3} account={account} onSelect={setSelected} onBuy={buyLicense} onCancel={cancelListing} />) : <p>No active license listings found.</p>}</div></section>
 
       <section className="grid two">
         <MintForm form={mintForm} setForm={setMintForm} onSubmit={mintLicense} disabled={!account || wrongNetwork || !contracts.PrintLicenseNFT} uploadStatus={uploadStatus} lastMetadata={lastMetadata} />
-        <article><h2>PRINT reward/token info</h2>{tokenInfo ? <><p><strong>Name:</strong> {tokenInfo.name}</p><p><strong>Symbol:</strong> {tokenInfo.symbol}</p><p><strong>Your balance:</strong> {tokenInfo.balance} {tokenInfo.symbol}</p></> : <p>Connect wallet to load PRINT reward token data.</p>}<p className="note">PRINT is displayed as a reward/loyalty token. Marketplace purchases in this phase use ETH.</p></article>
+        <article className="token-panel"><details open><summary>PRINT reward/token info</summary>{tokenInfo ? <div className="token-mini"><p><strong>Name:</strong> {tokenInfo.name}</p><p><strong>Symbol:</strong> {tokenInfo.symbol}</p><p><strong>Your balance:</strong> {tokenInfo.balance} {tokenInfo.symbol}</p></div> : <p>Connect wallet to load PRINT reward token data.</p>}<p className="note">PRINT proves the ERC20 reward-token requirement. Local marketplace purchases still use ETH through PrintMarketplace.</p></details></article>
       </section>
 
       <section className="panel"><h2>My licenses and listing controls</h2><p className="note">Owned licenses are discovered from LicenseMinted events, checked with ownerOf, and matched with active marketplace listings. Use this section to list an unlisted license or cancel your active listing.</p><div className="card-grid">{myLicenses.length ? myLicenses.map((license) => <OwnedLicenseCard key={license.tokenId} license={license} web3={web3} listPrice={listPrices[license.tokenId] || ""} onPriceChange={(value) => setListPrices({ ...listPrices, [license.tokenId]: value })} onList={listLicense} onCancel={cancelListing} onSelect={setSelected} />) : <p>No licenses owned by connected wallet were found. Mint a license, buy one from the marketplace, or switch MetaMask to the account that owns the NFT.</p>}</div></section>
 
       <section className="panel"><h2>License details/history</h2>{selected ? <LicenseDetails license={selected} web3={web3} /> : <p>Select a marketplace card or owned license to view details.</p>}</section>
+
+      <DemoHelp />
     </main>
   );
 }
 
 function DemoHelp() {
-  return <section className="panel help-panel"><h2>Final local demo account guide</h2><p className="note">Use the local Hardhat accounts only. Do not use mainnet, Sepolia, private keys in source code, or real funds.</p><div className="grid three"><article><h3>1. Creator / seller</h3><p>Use Hardhat account #1 to connect MetaMask, mint a manufacturing/use license NFT, and list it for ETH.</p></article><article><h3>2. Buyer</h3><p>Switch MetaMask to Hardhat account #2, buy the listed license, then confirm owner, SALE history, and price history in details.</p></article><article><h3>3. Resale buyer</h3><p>Switch back to the new owner to relist, then buy from Hardhat account #3 to demonstrate the 10% creator royalty on resale.</p></article></div></section>;
+  return <section className="panel help-panel"><details><summary>Reviewer demo guide</summary><p className="note">Use the local Hardhat accounts only. Do not use mainnet, Sepolia, private keys in source code, or real funds.</p><div className="grid three"><article><h3>1. Creator / seller</h3><p>Use Hardhat account #1 to connect MetaMask, mint a manufacturing/use license NFT, and list it for ETH.</p></article><article><h3>2. Buyer</h3><p>Switch MetaMask to Hardhat account #2, buy the listed license, then confirm owner, SALE history, and price history in details.</p></article><article><h3>3. Resale buyer</h3><p>Switch back to the new owner to relist, then buy from Hardhat account #3 to demonstrate the 10% creator royalty on resale.</p></article></div></details></section>;
 }
 
 function LicensePreview({ src, alt = "License preview", warning = "" }) {
@@ -359,7 +364,7 @@ function OwnedLicenseCard({ license, web3, listPrice, onPriceChange, onList, onC
 function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadata }) {
   const update = (key, value) => setForm({ ...form, [key]: value });
   const requiresFile = !form.manualMode && !form.file;
-  return <article><h2>Upload and mint license NFT</h2><p className="note">Phase 6 creates ERC721 metadata for a manufacturing/use license. Mock/demo CIDs are generated when no backend IPFS upload endpoint is configured; they are clearly labeled and are not real IPFS uploads.</p><p className="note">Mock/demo mode stores only lightweight local metadata. Large files/previews are not permanently stored in the browser.</p><form onSubmit={onSubmit} className="form">
+  return <article><h2>Upload and mint license NFT</h2><p className="note">Final local demo creates ERC721 metadata for a manufacturing/use license. Mock/demo CIDs are generated when no backend IPFS upload endpoint is configured; they are clearly labeled and are not real IPFS uploads.</p><p className="note">Mock/demo mode stores only lightweight local metadata. Large files/previews are not permanently stored in the browser.</p><form onSubmit={onSubmit} className="form">
     <label>Manufacturing file (STL, STEP, 3MF, CNC, ZIP, PDF, drawings)<input required={!form.manualMode} type="file" onChange={(e) => update("file", e.target.files?.[0] || null)} /></label>
     <label>Optional preview image/render<input type="file" accept="image/*" onChange={(e) => update("previewFile", e.target.files?.[0] || null)} /></label>
     <input required placeholder="Title" value={form.title} onChange={(e) => update("title", e.target.value)} />
@@ -371,7 +376,7 @@ function MintForm({ form, setForm, onSubmit, disabled, uploadStatus, lastMetadat
     <input placeholder="Optional manual preview CID or URL" value={form.preview} onChange={(e) => update("preview", e.target.value)} />
     <label className="checkbox"><input type="checkbox" checked={form.manualMode} onChange={(e) => update("manualMode", e.target.checked)} /> Use manual CID fallback for demo/testing</label>
     {form.manualMode && <><input required placeholder="Manual file CID" value={form.fileCid} onChange={(e) => update("fileCid", e.target.value)} /><input placeholder="Optional manual metadata CID/tokenURI" value={form.metadataCid} onChange={(e) => update("metadataCid", e.target.value)} /></>}
-    <input required placeholder="Suggested initial price in ETH" value={form.initialPriceEth} onChange={(e) => update("initialPriceEth", e.target.value)} />
+    <input required type="number" min="0.000000000000000001" step="any" placeholder="Suggested initial price in ETH" value={form.initialPriceEth} onChange={(e) => update("initialPriceEth", e.target.value)} />
     <p className="status">{uploadStatus}</p>
     {lastMetadata && <details><summary>Last generated metadata JSON</summary><pre>{JSON.stringify(lastMetadata, null, 2)}</pre></details>}
     <button disabled={disabled || requiresFile} type="submit">Upload metadata and mint manufacturing/use license</button>
@@ -399,7 +404,7 @@ function X402PreviewDemo({ tokenId }) {
     }
   };
 
-  return <section className="x402-demo"><h4>x402 / HTTP 402 protected preview demo</h4><p className="note">This is a mocked x402-style local demo. It proves the HTTP 402 flow for protected license preview data, but it does not perform real payment settlement. NFT purchases still happen with ETH through PrintMarketplace.</p><button disabled={loading} onClick={() => requestPreview(false)}>Request unpaid preview (expect 402)</button><button disabled={loading} className="secondary" onClick={() => requestPreview(true)}>Mock pay / authorize demo access</button>{result && <div className={result.ok ? "status" : result.status === 402 ? "warning" : "error"}><p><strong>Response:</strong> {result.status} {result.ok ? "OK" : result.status === 402 ? "Payment Required" : "Error"}</p><pre>{JSON.stringify(result.body, null, 2)}</pre></div>}</section>;
+  return <details className="x402-demo"><summary>Advanced demo: HTTP 402 protected preview</summary><p className="note">This mocked x402-style local demo proves the HTTP 402 flow for protected license preview data. It does not perform real payment settlement. NFT purchases still happen with ETH through PrintMarketplace.</p><div className="button-row"><button disabled={loading} onClick={() => requestPreview(false)}>Request unpaid preview (expect 402)</button><button disabled={loading} className="secondary" onClick={() => requestPreview(true)}>Mock pay / authorize demo access</button></div>{result && <div className={result.ok ? "status" : result.status === 402 ? "warning" : "error"}><p><strong>Response:</strong> {result.status} {result.ok ? "OK" : result.status === 402 ? "Payment Required" : "Error"}</p><pre>{JSON.stringify(result.body, null, 2)}</pre></div>}</details>;
 }
 
 function LicenseDetails({ license, web3 }) {

@@ -20,6 +20,11 @@ button {
 button:disabled { background: #9aa8c7; cursor: not-allowed; }
 button.secondary { background: #eef2ff; color: #244082; }
 code { overflow-wrap: anywhere; }
+details summary {
+  color: #244082;
+  cursor: pointer;
+  font-weight: 800;
+}
 
 .app-shell {
   min-height: 100vh;
@@ -54,6 +59,7 @@ h2, h3 { margin-top: 0; }
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 .grid.two { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.compact-grid article { padding: 1rem; }
 
 .listing-card { display: flex; flex-direction: column; }
 .preview {
@@ -88,6 +94,14 @@ pre { background: #101827; border-radius: 0.75rem; color: #e7eefc; overflow-x: a
 .detail-preview { margin-bottom: 1rem; max-width: 420px; }
 .grid.three { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .help-panel article { box-shadow: none; margin-bottom: 0; }
+.help-panel { background: #fbfcff; box-shadow: none; }
+.debug-panel, .token-panel { box-shadow: 0 8px 24px rgb(23 32 51 / 5%); }
+.token-mini {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.token-mini p { margin: 0.25rem 0; }
 .badge { border-radius: 999px; display: inline-block; font-weight: 700; padding: 0.25rem 0.6rem; }
 .badge.listed { background: #fff7df; color: #8a5a00; }
 .badge.unlisted { background: #eaf7ef; color: #207044; }
@@ -108,10 +122,17 @@ pre { background: #101827; border-radius: 0.75rem; color: #e7eefc; overflow-x: a
   max-width: 90%;
 }
 .x402-demo {
-  background: #f8fbff;
+  background: #fbfcff;
   border: 1px solid #cbd5ea;
   border-radius: 0.85rem;
   margin: 1rem 0;
   padding: 1rem;
 }
 .x402-demo pre { margin-bottom: 0; }
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+.button-row button { margin: 0; }
