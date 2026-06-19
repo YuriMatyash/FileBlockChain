@@ -56,7 +56,7 @@ Only import local Hardhat test keys. Never use these accounts for real funds.
 ## Part C — List and cancel
 
 1. Stay on the owner/creator account.
-2. Open **My Licenses**.
+2. Open **My Owned Licenses**.
 3. Enter an ETH price and list the license.
 4. Show the active marketplace listing.
 5. Optionally cancel the listing to demonstrate delisting.
@@ -69,8 +69,11 @@ Only import local Hardhat test keys. Never use these accounts for real funds.
 3. Buy the listed license NFT with the exact ETH price.
 4. Confirm the transaction in MetaMask.
 5. Show that ownership changed to the buyer.
-6. Show the ownership history entry with action `SALE`, price, timestamp, previous owner, and new owner.
-7. Explain payment split:
+6. Switch back to the creator account and show the NFT is no longer under **My Owned Licenses** because the creator no longer owns it.
+7. Show that the same NFT now appears in **Created & Sold Licenses** as a compact collapsible row with current owner, listing status, last sale price, and a details/history button.
+8. Expand the row to explain that the creator can still track circulation, resale history, and royalty-relevant events without owner-only list/cancel controls.
+9. Show the ownership history entry with action `SALE`, price, timestamp, previous owner, and new owner.
+10. Explain payment split:
    - 10% royalty is calculated for the original creator/designer.
    - 90% is paid to the current seller.
    - If the first seller is also the creator, both payments go to the same creator address, so the creator effectively receives the full sale price.
@@ -85,7 +88,16 @@ Only import local Hardhat test keys. Never use these accounts for real funds.
 6. Show history now includes another `SALE` entry.
 7. Explain that the original creator still receives the 10% royalty on resale, while the reseller receives 90%.
 
-## Part F — Details, history, and timestamps
+## Part F — Creator tracking after sale
+
+When returning to the creator account after a purchase or resale:
+
+- **My Owned Licenses** should include only NFTs currently owned by the connected wallet.
+- **Created & Sold Licenses** should include NFTs originally created by that wallet but now owned by another wallet.
+- Sold-created rows are collapsible and tracking-only; they show token ID, title, current owner, listing status, last sale price, preview/placeholder, seller if listed, current listing price if listed, file type/category, and a short sale/price summary.
+- Use the row button to open full details/history.
+
+## Part G — Details, history, and timestamps
 
 On the NFT details view, show:
 

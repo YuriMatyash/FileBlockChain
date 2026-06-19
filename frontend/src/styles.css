@@ -136,3 +136,32 @@ pre { background: #101827; border-radius: 0.75rem; color: #e7eefc; overflow-x: a
   margin: 0.75rem 0;
 }
 .button-row button { margin: 0; }
+
+.sold-license-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.sold-license-row {
+  background: #fbfcff;
+  border: 1px solid #d9e2f2;
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+}
+.sold-license-row summary {
+  align-items: center;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(120px, auto));
+}
+.sold-license-body {
+  border-top: 1px solid #d9e2f2;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(180px, 280px) 1fr;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+}
+.sold-license-preview .preview { min-height: 180px; }
+@media (max-width: 780px) {
+  .sold-license-row summary, .sold-license-body { grid-template-columns: 1fr; }
+}
