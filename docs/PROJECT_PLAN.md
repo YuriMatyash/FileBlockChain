@@ -1,27 +1,116 @@
-# PrintChain Project Plan
+# PrintChain Project Plan and Final Status
 
-PrintChain is implemented strictly in phases. This repository currently contains Phase 2 NFT license contract work in addition to the earlier setup and PrintToken phases.
+PrintChain was built in phases as a local educational Web3 DApp marketplace for digital manufacturing files. The final submission focuses on local Hardhat review rather than testnet/mainnet deployment.
 
-Later phases will add contracts, tests, deployment scripts, frontend marketplace flows, IPFS, and the x402 demo.
+## Project summary
 
-## Solidity version note
+PrintChain lets creators mint manufacturing/use license NFTs for digital manufacturing files. Supported examples include STL, STEP, 3MF, G-code, CNC files, ZIP packages, PDF instructions, technical drawings, and preview renders.
 
-Phase 0 configures Hardhat to compile Solidity `0.8.28`. Future contracts should use a compatible pragma such as `^0.8.20`, which is compatible with OpenZeppelin Contracts 5.x and this compiler setting.
+The required product wording is central to the project:
 
+> Each NFT represents a license to use, print, or manufacture the digital model/file.
 
-## Phase 2 status
+## Final architecture
 
-Phase 2 adds `contracts/PrintLicenseNFT.sol` and `test/PrintLicenseNFT.test.js`. The NFT is a manufacturing/use license token, stores IPFS CIDs and token URI data, records the first ownership history entry at mint time, and restricts direct wallet transfers so future marketplace sales can enforce royalties and history updates.
+| Layer | Implementation |
+| --- | --- |
+| Contracts | Hardhat + Solidity + OpenZeppelin |
+| Reward token | `PrintToken` ERC20 (`PRINT`) |
+| License NFT | `PrintLicenseNFT` ERC721-style manufacturing/use license token |
+| Marketplace | `PrintMarketplace` ETH listings, purchases, royalties, and sales |
+| Frontend | Vite + React + `web3.js` + MetaMask |
+| Upload | Mock/demo IPFS adapter by default |
+| Backend | Express mock x402-style HTTP 402 route |
+| Network | Local Hardhat chain `31337` |
 
+## Phase completion summary
 
-## Phase 3 marketplace status
+### Phase 0 — Project setup
 
-Phase 3 adds `PrintMarketplace.sol` for ETH-denominated license NFT sales. Owners can list and cancel listings, buyers must send the exact ETH price, and the marketplace enforces a 10% royalty to the original creator/designer with 90% paid to the current seller. Purchases use the controlled NFT transfer path so direct wallet transfers remain restricted and sale history is recorded on-chain. Frontend, IPFS upload, deployment, and x402 work remain later phases.
+Completed. The repository includes root Hardhat workspace files, frontend and backend folders, environment examples, docs folder, and local npm scripts.
 
-## Product display clarification before Phase 5
+### Phase 1 — ERC20 reward token
 
-Phase 5 should present each marketplace item as a clear manufacturing/use license listing. Buyers should see human-readable information before buying, rather than only a token ID, creator wallet, seller wallet, and price. The eventual UI should show the license title, short summary, longer description or documentation, file type, category, optional preview image/render, file CID, metadata CID/token URI, creator/designer, current owner/seller, price, ownership history, price history, and relevant timestamps.
+Completed. `PrintToken` is an ERC20 reward token named `PrintToken` with symbol `PRINT`. It mints an initial supply to the deployer and lets the owner mint reward tokens.
 
-Creators may manually provide a preview image/render CID or URL. Automatic STL/3D preview generation is not required yet. If a listing has no preview image, the frontend should show a simple placeholder. Automatic file summarization is also not required; longer documentation can be entered by the creator or referenced through metadata.
+### Phase 2 — License NFT contract
 
-The contracts do not need to store every buyer-facing display field directly on-chain. Keep on-chain storage focused on important fields such as creator, title/description/category/file type, CIDs, price/history records, timestamps, and royalty-related state. Extra display fields can live in the ERC721 metadata JSON on IPFS, including `name`, `description`, optional `image`, `external_url` or file reference, `attributes` for file type/category/license type/software compatibility, and optional `documentation` text or `documentation_cid`.
+Completed. `PrintLicenseNFT` mints manufacturing/use license NFTs, stores creator and CID metadata, records mint timestamps, and starts ownership history on mint.
+
+### Phase 3 — Marketplace contract
+
+Completed. `PrintMarketplace` supports listing, canceling, and buying license NFTs with local test ETH. It calculates a 10% creator royalty and pays 90% to the seller during marketplace purchases.
+
+### Phase 4 — Deployment scripts
+
+Completed. `scripts/deploy.js` deploys all contracts locally and writes frontend-readable addresses/ABIs. `scripts/seed-demo.js` mints demo rewards, mints a sample license, and lists it for sale.
+
+### Phase 5 — Frontend wallet and marketplace
+
+Completed. The frontend connects MetaMask, uses `web3.js`, reads local contract config, shows marketplace listings, and supports buying listed NFTs.
+
+### Phase 6 — Upload and mint flow
+
+Completed with mock/demo upload behavior. The frontend builds ERC721-compatible metadata and uses mock CID generation by default. No real IPFS provider credentials are included.
+
+### Phase 7 — My Licenses and history
+
+Completed. The frontend can show licenses owned by the connected wallet, list/cancel owned licenses, and display ownership/history information.
+
+### Phase 8 — x402 demo
+
+Completed as a mock/demo. The backend route `GET /api/paid-preview/:tokenId` returns HTTP `402` without mock proof and protected demo JSON with mock proof. No real x402 settlement is implemented.
+
+### Phase 9 — Documentation and final polish
+
+Completed in this phase. README, setup guide, demo flow, and project plan were updated for final review.
+
+## What is intentionally not included
+
+- Mainnet configuration.
+- Sepolia deployment instructions.
+- Real private keys or seed phrases.
+- Real IPFS provider API keys.
+- Real x402 settlement/facilitator integration.
+- Automatic STL/3D preview generation.
+- Storage of full manufacturing files on-chain.
+
+## Real vs mocked implementation
+
+| Feature | Real | Mock/demo |
+| --- | --- | --- |
+| ERC20 PRINT contract | Yes | No |
+| ERC721 license NFT contract | Yes | No |
+| Marketplace ETH purchases | Yes, on local Hardhat | No |
+| 10% creator royalty in marketplace | Yes | No |
+| Ownership history and timestamps | Yes, on-chain | No |
+| IPFS upload | No default real upload | Yes, mock CID-like values |
+| Metadata rendering | Yes for local/session metadata | Mock CID storage by default |
+| x402 route shape and HTTP 402 status | Yes | Payment proof/settlement is mocked |
+
+## School requirement mapping
+
+| School requirement | PrintChain mapping |
+| --- | --- |
+| DApp | React/Vite frontend plus Solidity contracts on Hardhat. |
+| ERC20 token | `PrintToken.sol` implements `PrintToken` / `PRINT`. |
+| NFT | `PrintLicenseNFT.sol` implements manufacturing/use license NFTs. |
+| NFT with owner memory/history | Ownership history records owner changes with timestamps and prices. |
+| 10% transfer to creator | `PrintMarketplace.buyLicense` pays 10% of sale price to the original creator/designer. |
+| Dates stored in contracts | Minting, listing, sale, and history use `block.timestamp`. |
+| History accumulation | NFT history arrays accumulate `MINT` and `SALE` records; listings and sales emit events. |
+| IPFS document/file upload or mock/demo upload | Frontend creates mock/demo CIDs and metadata locally; docs identify that this is not real IPFS by default. |
+| MetaMask | Frontend connects to MetaMask for accounts, network, and transaction signing. |
+| web3.js | Frontend imports and uses `web3` for contract calls and transactions. |
+| Complex smart contract | NFT + marketplace combine controlled transfers, ETH sale flow, creator royalties, timestamps, and history. |
+| x402 / HTTP 402 demo | Backend route returns HTTP 402 without mock proof and protected JSON with mock proof. |
+
+## Review readiness checklist
+
+- Documentation explains PrintChain and license NFT framing.
+- README and docs clearly label mock IPFS and mock x402 behavior.
+- Demo command order is documented.
+- MetaMask local Hardhat chain `31337` setup is documented.
+- Demo account roles are documented.
+- Marketplace flow covers mint, list, cancel, buy, resale, royalty, and history.
+- No real secrets are required or documented.
