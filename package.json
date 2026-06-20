@@ -14,7 +14,8 @@
     "backend:start": "npm start --prefix backend",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "seed:local": "hardhat run scripts/seed-demo.js --network localhost",
-    "backend": "npm run backend:start"
+    "backend": "npm run backend:start",
+    "report:requirements": "node scripts/generate-requirements-report.js"
   },
   "devDependencies": {
     "hardhat": "^2.22.19",
