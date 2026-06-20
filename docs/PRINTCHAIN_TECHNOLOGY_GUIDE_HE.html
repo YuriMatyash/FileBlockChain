@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>מדריך טכנולוגיות ומושגים בפרויקט PrintChain</title>
+  <style>
+    @page { size: A4; margin: 17mm 14mm; }
+    body { direction: rtl; font-family: "DejaVu Sans", "Arial", sans-serif; line-height: 1.6; color: #1f2937; background: #fff; }
+    h1, h2, h3 { color: #111827; page-break-after: avoid; }
+    h1 { text-align: center; font-size: 27px; border-bottom: 3px solid #7c3aed; padding-bottom: 10px; }
+    h2 { margin-top: 30px; font-size: 21px; border-bottom: 1px solid #d1d5db; padding-bottom: 5px; }
+    h3 { font-size: 17px; margin-top: 20px; color: #374151; }
+    p, li { font-size: 13.5px; }
+    .step { margin: 4px 0; }
+    code, pre { direction: ltr; unicode-bidi: embed; font-family: "DejaVu Sans Mono", monospace; background: #f3f4f6; border-radius: 4px; }
+    code { padding: 1px 4px; }
+    pre { padding: 10px; overflow-wrap: break-word; white-space: pre-wrap; border: 1px solid #e5e7eb; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 11.2px; page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    th, td { border: 1px solid #d1d5db; padding: 6px; vertical-align: top; }
+    th { background: #ede9fe; color: #111827; }
+    blockquote { border-right: 4px solid #7c3aed; margin: 12px 0; padding: 8px 14px; background: #f5f3ff; }
+  </style>
+</head>
+<body>
+<h1>מדריך טכנולוגיות ומושגים בפרויקט PrintChain</h1>
+
+<blockquote>מדריך לימודי למתחילים. המטרה היא להבין את הטכנולוגיות, המושגים והארכיטקטורה של PrintChain לפני הצגת הפרויקט. המדריך מתייחס למימוש בפועל בקבצי הפרויקט, ומסמן בבירור מה אמיתי ברשת מקומית ומה מוק/דמו.</blockquote>
+
+<h2>1. מבוא כללי</h2>
+
+<p><strong>PrintChain</strong> הוא פרויקט DApp חינוכי לשוק רישיונות לקבצי ייצור דיגיטליים. דוגמאות לקבצים כאלה הן STL, STEP, 3MF, G-code, קבצי CNC, ZIP, PDF, שרטוטים טכניים ותמונות תצוגה מקדימה.</p>
+
+<p>הרעיון המרכזי: יוצר מעלה או מזין קובץ ייצור ומטא־דאטה, מטביע NFT שמייצג <strong>רישיון להשתמש, להדפיס או לייצר את המודל/הקובץ הדיגיטלי</strong>, ומוכר את הרישיון דרך Marketplace. הקונה מקבל את ה-NFT, והחוזים שומרים היסטוריית בעלות, מחירים ותאריכים.</p>
+
+<h3>למה זה DApp?</h3>
+
+<p>DApp הוא קיצור של Decentralized Application — אפליקציה מבוזרת. בפרויקט רגיל, רוב הלוגיקה והנתונים נמצאים בשרת מרכזי. בפרויקט DApp, חלק חשוב מהלוגיקה נמצא בחוזים חכמים (Smart Contracts) על גבי Blockchain.</p>
+
+<p>ב-PrintChain:</p>
+
+<ul>
+<li>החוזים החכמים שומרים בעלות, היסטוריה, תאריכים ותמלוגים.</li>
+<li>המשתמש חותם עסקאות דרך MetaMask.</li>
+<li>ה-Frontend קורא וכותב לחוזים דרך <code>web3.js</code>.</li>
+<li>הקבצים עצמם לא נשמרים בבלוקצ'יין; נשמרים רק מזהים כמו CID.</li>
+</ul>
+
+<h3>איזו בעיה הפרויקט פותר?</h3>
+
+<p>קבצי ייצור דיגיטליים קלים להעתקה. PrintChain מדגים דרך לנהל <strong>רישיונות שימוש</strong> לקבצים כאלה:</p>
+
+<ul>
+<li>מי היוצר המקורי?</li>
+<li>מי הבעלים הנוכחי של הרישיון?</li>
+<li>מתי הרישיון נוצר ונמכר?</li>
+<li>באיזה מחיר הוא נמכר?</li>
+<li>איך מבטיחים שיוצר מקבל 10% במכירה דרך המרקטפלייס?</li>
+</ul>
+
+<h3>ההבדל בין Web App רגיל לבין DApp</h3>
+
+<table>
+<tr><th>נושא</th><th>Web App רגיל</th><th>DApp כמו PrintChain</th></tr>
+<tr><td>איפה הנתונים החשובים נשמרים?</td><td>במסד נתונים של שרת</td><td>בחוזים על רשת Blockchain מקומית</td></tr>
+<tr><td>מי מאשר פעולה כספית?</td><td>השרת או מערכת תשלומים</td><td>המשתמש דרך MetaMask</td></tr>
+<tr><td>האם אפשר לקרוא היסטוריה מהחוזה?</td><td>בדרך כלל תלוי בשרת</td><td>כן, היסטוריה נשמרת בחוזה</td></tr>
+<tr><td>האם צריך Wallet?</td><td>לא תמיד</td><td>כן, כדי לחתום עסקאות</td></tr>
+<tr><td>האם יש Gas?</td><td>לא</td><td>כן, בעסקאות כתיבה לבלוקצ'יין</td></tr>
+</table>
+
+<h2>2. תמונת מערכת כללית</h2>
+
+<p>PrintChain בנוי מכמה חלקים שעובדים יחד:</p>
+
+<p class="step">1. <strong>Smart Contracts</strong> — חוזים ב-Solidity שמנהלים טוקנים, NFT, Marketplace ותמלוגים.</p>
+<p class="step">2. <strong>Hardhat local blockchain</strong> — רשת Ethereum מקומית לצורכי פיתוח ובדיקות.</p>
+<p class="step">3. <strong>MetaMask wallet</strong> — ארנק בדפדפן שמחזיק חשבונות וחותם עסקאות.</p>
+<p class="step">4. <strong>React/Vite frontend</strong> — ממשק המשתמש בדפדפן.</p>
+<p class="step">5. <strong>web3.js</strong> — ספרייה שמחברת בין ה-Frontend, MetaMask והחוזים.</p>
+<p class="step">6. <strong>Express backend</strong> — שרת קטן שמדגים HTTP 402 / x402-style route.</p>
+<p class="step">7. <strong>Mock IPFS upload/metadata</strong> — מצב דמו שמייצר CIDs מסוג <code>mock-*</code> אם אין שירות IPFS אמיתי.</p>
+<p class="step">8. <strong>Mock x402 protected route</strong> — route שמחזיר 402 בלי הוכחת תשלום מוק, ו-200 עם header דמו.</p>
+
+<h3>תרשים תקשורת פשוט</h3>
+
+<pre><code>
+User → MetaMask → Frontend React/Vite → web3.js → Smart Contracts → Hardhat blockchain
+
+Frontend → Backend Express → HTTP 402 / x402 demo
+
+Frontend → Mock/IPFS metadata adapter → CID / TokenURI → PrintLicenseNFT
+</code></pre>
+
+<h3>איך החלקים מתקשרים בפועל?</h3>
+
+<ul>
+<li>המשתמש פותח את האתר ומתחבר עם MetaMask.</li>
+<li>ה-Frontend קורא את כתובות החוזים מתוך <code>frontend/src/config/contracts.json</code> שנוצר אחרי deploy מקומי.</li>
+<li><code>web3.js</code> משתמש ב-ABI ובכתובת החוזה כדי לקרוא פונקציות או לשלוח עסקאות.</li>
+<li>MetaMask מציג חלון אישור כאשר צריך לשלוח עסקה.</li>
+<li>החוזים רצים על Hardhat local blockchain.</li>
+<li>ה-Backend רץ בנפרד על <code>http://127.0.0.1:4000</code> ומשמש לדמו x402.</li>
+<li>במצב IPFS דמו, ה-Frontend מייצר CID מקומי ולא באמת מעלה ל-IPFS.</li>
+</ul>
+
+<h2>3. Blockchain basics</h2>
+
+<h3>מה זה Blockchain?</h3>
+
+<p>Blockchain הוא יומן נתונים שמורכב מבלוקים. כל בלוק מכיל עסקאות, וכל בלוק מחובר לבלוק שלפניו. הרעיון הוא שקשה לשנות היסטוריה שכבר נכתבה.</p>
+
+<p>בפרויקט הזה ה-Blockchain הוא לא רשת ציבורית אמיתית, אלא <strong>רשת Hardhat מקומית</strong> שרצה על המחשב לצורכי לימוד.</p>
+
+<h3>מה זה Ethereum / EVM?</h3>
+
+<p>Ethereum היא רשת Blockchain שמאפשרת להריץ חוזים חכמים. EVM הוא Ethereum Virtual Machine — "המחשב הווירטואלי" שמריץ את החוזים.</p>
+
+<p>Hardhat מדמה רשת Ethereum מקומית שתומכת ב-EVM, ולכן אפשר להריץ עליה חוזי Solidity.</p>
+
+<h3>מה זו עסקה (Transaction)?</h3>
+
+<p>עסקה היא פעולה שנשלחת לרשת ומשנה מצב. לדוגמה:</p>
+
+<ul>
+<li>mint NFT חדש.</li>
+<li>list NFT למכירה.</li>
+<li>buy NFT.</li>
+<li>cancel listing.</li>
+<li>mint PRINT reward.</li>
+</ul>
+
+<p>עסקה דורשת חתימה מארנק ודורשת Gas.</p>
+
+<h3>מה זה Gas?</h3>
+
+<p>Gas הוא התשלום על חישוב ואחסון ב-Ethereum. ברשת אמיתית משלמים Gas ב-ETH אמיתי. ברשת Hardhat מקומית משתמשים ב-ETH דמיוני ללא ערך כספי.</p>
+
+<p>חשוב להבדיל בין:</p>
+
+<ul>
+<li><strong>מחיר Listing או Purchase</strong> — למשל 1 ETH עבור NFT.</li>
+<li><strong>Gas fee</strong> — עמלה קטנה על עצם ביצוע העסקה.</li>
+</ul>
+
+<h3>מה זה ארנק (Wallet)?</h3>
+
+<p>ארנק הוא כלי שמחזיק חשבונות וחותם פעולות. MetaMask הוא ארנק דפדפן נפוץ. הארנק לא "שומר מטבעות" כמו קובץ פיזי; הוא מחזיק מפתח פרטי שמאפשר לשלוט בכתובת Blockchain.</p>
+
+<h3>מה זה מפתח פרטי (Private Key)?</h3>
+
+<p>Private Key הוא סוד שמאפשר לחתום עסקאות. מי שמחזיק את המפתח הפרטי שולט בחשבון. אסור לשתף Private Key אמיתי.</p>
+
+<p>ב-Hardhat יש מפתחות פרטיים ציבוריים שמופיעים בטרמינל. הם בטוחים <strong>רק ברשת המקומית</strong>. אסור להשתמש בהם ברשת אמיתית כמו mainnet או Sepolia עם כסף אמיתי, כי כולם מכירים אותם.</p>
+
+<h3>מה זו כתובת (Address)?</h3>
+
+<p>Address היא מזהה ציבורי של חשבון או חוזה. לדוגמה, חשבון Hardhat ראשון נפוץ הוא:</p>
+
+<pre><code>
+0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
+</code></pre>
+
+<h3>מה זו רשת Hardhat מקומית?</h3>
+
+<p>Hardhat local network היא Blockchain שרץ מקומית במחשב בזמן הפיתוח. מריצים אותה עם:</p>
+
+<pre><code>
+npx hardhat node
+</code></pre>
+
+<p>Hardhat פותח חשבונות בדיקה עם 10000 ETH דמיוני לכל חשבון כדי שיהיה קל לבדוק עסקאות בלי כסף אמיתי.</p>
+
+<h3>ETH מקומי לעומת ETH אמיתי</h3>
+
+<table>
+<tr><th>סוג ETH</th><th>איפה נמצא?</th><th>ערך כספי?</th><th>שימוש</th></tr>
+<tr><td>Local Hardhat ETH</td><td>במחשב המקומי</td><td>אין ערך</td><td>פיתוח, בדיקות, דמו</td></tr>
+<tr><td>Real ETH</td><td>Ethereum mainnet</td><td>יש ערך אמיתי</td><td>עסקאות אמיתיות</td></tr>
+<tr><td>Sepolia ETH</td><td>Testnet ציבורי</td><td>בדרך כלל ללא ערך מסחרי, אך מוגבל</td><td>בדיקות ציבוריות</td></tr>
+</table>
+
+<p>הפרויקט הזה מיועד לרשת Hardhat מקומית בלבד במסגרת הדמו.</p>
+
+<h2>4. Smart contracts</h2>
+
+<h3>מה זה חוזה חכם (Smart Contract)?</h3>
+
+<p>חוזה חכם הוא תוכנית שרצה על Blockchain. במקום שהשרת יחליט מי הבעלים או כמה כסף להעביר, החוזה מגדיר כללים קבועים.</p>
+
+<p>ב-PrintChain החוזים מנהלים:</p>
+
+<ul>
+<li>טוקן ERC20 בשם PRINT.</li>
+<li>NFT רישיונות ייצור/שימוש.</li>
+<li>Marketplace למכירה וקנייה.</li>
+<li>תמלוג 10% ליוצר במכירה דרך המרקטפלייס.</li>
+<li>היסטוריית בעלות ותאריכים.</li>
+</ul>
+
+<h3>מה זה Solidity?</h3>
+
+<p>Solidity היא שפת תכנות לכתיבת חוזים חכמים ל-Ethereum/EVM. קבצי Solidity מסתיימים ב-<code>.sol</code>.</p>
+
+<p>קבצים מרכזיים בפרויקט:</p>
+
+<ul>
+<li><code>contracts/PrintToken.sol</code></li>
+<li><code>contracts/PrintLicenseNFT.sol</code></li>
+<li><code>contracts/PrintMarketplace.sol</code></li>
+</ul>
+
+<h3>מה זה Deployment?</h3>
+
+<p>Deployment הוא תהליך פריסת חוזה ל-Blockchain. אחרי deployment, החוזה מקבל כתובת משלו. ה-Frontend צריך לדעת את הכתובות כדי לדבר עם החוזים.</p>
+
+<p>בפרויקט מריצים:</p>
+
+<pre><code>
+npm run deploy:local
+</code></pre>
+
+<p>הסקריפט פורס את החוזים לרשת Hardhat המקומית וכותב קובץ config ל-Frontend.</p>
+
+<h3>מה זה ABI?</h3>
+
+<p>ABI הוא Application Binary Interface. זהו תיאור של פונקציות ואירועים בחוזה. ה-Frontend משתמש ב-ABI כדי לדעת איך לקרוא לפונקציות כמו <code>ownerOf</code>, <code>mintLicense</code>, <code>listLicense</code> או <code>buyLicense</code>.</p>
+
+<h3>קריאה לעומת עסקה</h3>
+
+<p>יש שני סוגי אינטראקציה עם חוזה:</p>
+
+<table>
+<tr><th>פעולה</th><th>מה היא עושה?</th><th>Gas?</th><th>דוגמה</th></tr>
+<tr><td>Read / call</td><td>קוראת מידע בלי לשנות מצב</td><td>לא</td><td><code>ownerOf(tokenId)</code>, <code>getActiveListings()</code></td></tr>
+<tr><td>Write / transaction</td><td>משנה מצב בבלוקצ'יין</td><td>כן</td><td><code>mintLicense</code>, <code>listLicense</code>, <code>buyLicense</code></td></tr>
+</table>
+
+<p>קריאות חינמיות כי הן לא משנות את הבלוקצ'יין. עסקאות כתיבה דורשות Gas כי הן נרשמות בבלוקצ'יין.</p>
+
+<h2>5. ERC20 and PRINT token</h2>
+
+<h3>מה זה ERC20?</h3>
+
+<p>ERC20 הוא תקן לטוקנים ניתנים להחלפה (Fungible Tokens). ניתנים להחלפה פירושו שכל יחידה זהה לאחרת. לדוגמה: 1 PRINT של משתמש א' שווה ל-1 PRINT של משתמש ב'.</p>
+
+<h3>מה זה PRINT בפרויקט?</h3>
+
+<p><code>PrintToken</code> הוא ERC20 בשם <code>PrintToken</code> עם סימול <code>PRINT</code>. הוא משמש כטוקן תגמול ולימוד, לא כמטבע התשלום המרכזי במרקטפלייס.</p>
+
+<p>בפרויקט:</p>
+
+<ul>
+<li>קניות Marketplace נעשות ב-ETH מקומי.</li>
+<li>PRINT משמש להצגת ERC20 ותגמולים.</li>
+<li><code>mintReward(address to, uint256 amount)</code> מאפשר לבעל החוזה להטביע תגמול.</li>
+</ul>
+
+<h3>למה PRINT אינו מטבע הרכישה?</h3>
+
+<p>כדי לפשט את הדמו, רכישות NFT נעשות ב-ETH דרך <code>PrintMarketplace</code>. PRINT נשאר טוקן reward/loyalty. זה מאפשר להראות גם ERC20 וגם מכירה ב-ETH בלי לסבך את תהליך הרכישה.</p>
+
+<h3>מושגים חשובים ב-ERC20</h3>
+
+<ul>
+<li><strong>Minting</strong> — יצירת טוקנים חדשים.</li>
+<li><strong>Transfer</strong> — העברה ממשתמש למשתמש.</li>
+<li><strong>balanceOf</strong> — בדיקת יתרה של כתובת.</li>
+<li><strong>initial supply</strong> — כמות ראשונית שנוצרת בזמן deploy.</li>
+</ul>
+
+<h3>איפה זה נמצא בקוד?</h3>
+
+<ul>
+<li>חוזה: <code>contracts/PrintToken.sol</code></li>
+<li>פונקציה: <code>mintReward</code></li>
+<li>בדיקות: <code>test/PrintToken.test.js</code></li>
+<li>תצוגת יתרה ב-Frontend: <code>frontend/src/main.jsx</code>, באזור Rewards / Token Info.</li>
+</ul>
+
+<h2>6. NFT, ERC721, and license NFTs</h2>
+
+<h3>מה זה NFT?</h3>
+
+<p>NFT הוא Non-Fungible Token — טוקן ייחודי. בניגוד ל-ERC20, כל NFT שונה מאחרים. אם ERC20 דומה למטבעות זהים, ERC721 דומה לתעודות ייחודיות.</p>
+
+<h3>ההבדל בין ERC20 ל-ERC721</h3>
+
+<table>
+<tr><th>נושא</th><th>ERC20</th><th>ERC721 / NFT</th></tr>
+<tr><td>האם היחידות זהות?</td><td>כן</td><td>לא, כל token ייחודי</td></tr>
+<tr><td>דוגמה בפרויקט</td><td>PRINT</td><td>PrintLicenseNFT</td></tr>
+<tr><td>מזהה יחידה</td><td>balance בכמות</td><td><code>tokenId</code></td></tr>
+<tr><td>שימוש</td><td>תגמולים</td><td>רישיון לקובץ ייצור</td></tr>
+</table>
+
+<h3>למה NFT הוא רישיון?</h3>
+
+<p>ב-PrintChain לא אומרים שה-NFT הוא "הקובץ עצמו". ה-NFT מייצג רישיון להשתמש, להדפיס או לייצר את המודל/הקובץ הדיגיטלי. זה חשוב כי קבצים דיגיטליים יכולים להיות מועתקים, אבל הרישיון וההיסטוריה מנוהלים בחוזה.</p>
+
+<h3>מה זה tokenId?</h3>
+
+<p><code>tokenId</code> הוא מספר ייחודי של NFT. לדוגמה, הרישיון הראשון יכול להיות <code>tokenId = 1</code>.</p>
+
+<h3>מה זה TokenURI?</h3>
+
+<p><code>tokenURI</code> הוא קישור למטא־דאטה של ה-NFT. בדרך כלל הוא נראה כך:</p>
+
+<pre><code>
+ipfs://bafy...
+</code></pre>
+
+<p>או בדמו המקומי:</p>
+
+<pre><code>
+ipfs://mock-...
+</code></pre>
+
+<h3>מה זה Metadata?</h3>
+
+<p>Metadata הוא JSON שמתאר את ה-NFT: שם, תיאור, תמונה, attributes, סוג קובץ, קטגוריה ועוד. ה-Blockchain לא שומר את כל התוכן הגדול, אלא שומר URI/CID שמצביע אליו.</p>
+
+<h3>מה נשמר on-chain ומה off-chain/mock?</h3>
+
+<table>
+<tr><th>מידע</th><th>נשמר בחוזה?</th><th>הערה</th></tr>
+<tr><td>tokenId</td><td>כן</td><td>מזהה NFT</td></tr>
+<tr><td>creator</td><td>כן</td><td>יוצר מקורי</td></tr>
+<tr><td>current owner</td><td>כן, דרך ERC721</td><td><code>ownerOf</code></td></tr>
+<tr><td>title/description</td><td>כן, בצורה בסיסית</td><td>בפרטי license</td></tr>
+<tr><td>fileCid</td><td>כן</td><td>מזהה קובץ, לא הקובץ עצמו</td></tr>
+<tr><td>metadataCid</td><td>כן</td><td>מזהה metadata</td></tr>
+<tr><td>קובץ STL/STEP עצמו</td><td>לא</td><td>אמור להיות ב-IPFS או מוק בדמו</td></tr>
+<tr><td>preview image</td><td>לא ישירות</td><td>CID/URI במטא־דאטה</td></tr>
+</table>
+
+<p>החוזה שמיישם את ה-NFT הוא <code>contracts/PrintLicenseNFT.sol</code>.</p>
+
+<h2>7. Ownership, history, and timestamps</h2>
+
+<h3>מה זה ownerOf?</h3>
+
+<p><code>ownerOf(tokenId)</code> היא פונקציית ERC721 שמחזירה מי הבעלים הנוכחי של NFT מסוים.</p>
+
+<h3>למה לשמור היסטוריית בעלות?</h3>
+
+<p>דרישת הקורס כוללת NFT עם זיכרון של בעלים והיסטוריה מצטברת. לכן PrintChain לא מסתפק רק בבעלים הנוכחי. הוא שומר רשומות היסטוריה.</p>
+
+<p>כל רשומה כוללת:</p>
+
+<ul>
+<li><code>previousOwner</code></li>
+<li><code>newOwner</code></li>
+<li><code>price</code></li>
+<li><code>timestamp</code></li>
+<li><code>actionType</code></li>
+</ul>
+
+<h3>מה זה MINT ומה זה SALE?</h3>
+
+<ul>
+<li><code>MINT</code> — רשומה שנוצרת כאשר NFT חדש מוטבע. הבעלים הקודם הוא כתובת אפס, והבעלים החדש הוא היוצר.</li>
+<li><code>SALE</code> — רשומה שנוצרת כאשר NFT נמכר דרך <code>PrintMarketplace</code>.</li>
+</ul>
+
+<h3>מה זה timestamp?</h3>
+
+<p>Timestamp הוא זמן שנשמר בחוזה לפי <code>block.timestamp</code>. הוא מאפשר לדעת מתי פעולה קרתה.</p>
+
+<h3>למה תאריכים חשובים?</h3>
+
+<p>כי הם מאפשרים להראות:</p>
+
+<ul>
+<li>מתי הרישיון נוצר.</li>
+<li>מתי הוא נמכר.</li>
+<li>מתי השתנתה בעלות.</li>
+<li>רצף היסטורי של פעולות.</li>
+</ul>
+
+<h3>איך זה מוצג בממשק?</h3>
+
+<p>ה-Frontend קורא את <code>getOwnershipHistory(tokenId)</code> ומציג את ההיסטוריה באזור Details/History. הוא גם מציג רשימות כמו:</p>
+
+<ul>
+<li><strong>My Owned Licenses</strong> — רישיונות שהחשבון המחובר מחזיק כרגע.</li>
+<li><strong>Created &amp; Sold Licenses</strong> — רישיונות שהחשבון יצר בעבר אבל כבר אינם בבעלותו.</li>
+</ul>
+
+<h3>למה יוצר יכול לא להיות הבעלים?</h3>
+
+<p>אם היוצר מכר את ה-NFT, הבעלים החדש הוא הקונה. אבל היוצר עדיין רשום בחוזה כ-<code>creator</code>, ולכן אפשר להמשיך לעקוב אחרי רישיונות שהוא יצר ולקבל תמלוג במכירה דרך המרקטפלייס.</p>
+
+<h2>8. Marketplace and ETH purchase flow</h2>
+
+<h3>מה עושה Marketplace contract?</h3>
+
+<p><code>PrintMarketplace</code> הוא חוזה שמנהל מכירות NFT:</p>
+
+<ul>
+<li>יצירת listing.</li>
+<li>ביטול listing.</li>
+<li>קנייה ב-ETH.</li>
+<li>העברת NFT לקונה.</li>
+<li>חלוקת תשלום בין יוצר למוכר.</li>
+<li>הסרת listing אחרי מכירה.</li>
+</ul>
+
+<h3>מה זה Listing?</h3>
+
+<p>Listing הוא הצעה למכירה: tokenId, מוכר, מחיר, זמן יצירה וסטטוס active.</p>
+
+<p>פונקציה מרכזית:</p>
+
+<pre><code>
+listLicense(tokenId, price)
+</code></pre>
+
+<p>כאשר בעל NFT עושה listing, זו עסקת כתיבה ולכן MetaMask מבקש אישור וגז.</p>
+
+<h3>מחיר listing לעומת gas fee</h3>
+
+<ul>
+<li><strong>Listing price</strong> — המחיר שהקונה ישלם עבור הרישיון, למשל 1 ETH.</li>
+<li><strong>Gas fee</strong> — עלות קטנה לביצוע פעולה בבלוקצ'יין, למשל יצירת listing.</li>
+</ul>
+
+<p>גם אם רק מפרסמים listing ולא קונים, עדיין צריך gas כי מצב החוזה משתנה.</p>
+
+<h3>מה זה cancel listing?</h3>
+
+<p><code>cancelListing(tokenId)</code> מבטל הצעה פעילה. רק המוכר שיצר את ה-listing יכול לבטל אותה.</p>
+
+<h3>מה זה buy?</h3>
+
+<p><code>buyLicense(tokenId)</code> קונה listing פעיל. הקונה שולח ETH בדיוק בגובה המחיר. החוזה מעביר NFT לקונה ומחלק את הכסף.</p>
+
+<h3>למה MetaMask מבקש אישור?</h3>
+
+<p>כי פעולות כמו list/cancel/buy משנות מצב בבלוקצ'יין. MetaMask מבקש מהמשתמש לאשר את העסקה ולחתום עליה.</p>
+
+<h3>למה היוצר/מוכר עשויים לקבל ETH כהעברה פנימית?</h3>
+
+<p>כאשר <code>buyLicense</code> מתבצעת, העסקה החיצונית היא מהקונה לחוזה המרקטפלייס. בתוך אותה עסקה החוזה שולח ETH ליוצר ולמוכר. MetaMask Activity לא תמיד מציג internal transfers בצורה ברורה, לכן עדיף לבדוק יתרות או בדיקות אוטומטיות.</p>
+
+<p>פונקציות חשובות:</p>
+
+<ul>
+<li><code>listLicense</code></li>
+<li><code>cancelListing</code></li>
+<li><code>buyLicense</code></li>
+<li><code>getActiveListings</code></li>
+<li><code>getListing</code></li>
+</ul>
+
+<h2>9. 10% creator royalty</h2>
+
+<h3>מה דרישת הקורס?</h3>
+
+<p>הדרישה אומרת שמעבר מבעלות אחת לשנייה, במיוחד resale, צריך לשלוח 10% ליוצר המקורי.</p>
+
+<h3>איך PrintMarketplace אוכף את זה?</h3>
+
+<p>ב-<code>buyLicense</code>, החוזה מחשב:</p>
+
+<pre><code>
+royaltyAmount = price * 10%
+sellerAmount = price - royaltyAmount
+</code></pre>
+
+<p>במימוש בפועל הערכים מוגדרים בבסיס נקודות (Basis Points):</p>
+
+<ul>
+<li><code>ROYALTY_BASIS_POINTS = 1000</code></li>
+<li><code>BASIS_POINTS = 10000</code></li>
+</ul>
+
+<p>כלומר 1000/10000 = 10%.</p>
+
+<h3>למי הכסף הולך?</h3>
+
+<ul>
+<li>10% הולך ל-<code>creator</code> המקורי של הרישיון.</li>
+<li>90% הולך ל-<code>seller</code>, כלומר הבעלים הנוכחי שמוכר.</li>
+</ul>
+
+<p>לדוגמה, אם מחיר resale הוא 2 ETH:</p>
+
+<ul>
+<li>היוצר המקורי מקבל 0.2 ETH.</li>
+<li>המוכר הנוכחי מקבל 1.8 ETH.</li>
+</ul>
+
+<h3>למה זה נעשה במרקטפלייס?</h3>
+
+<p>ERC721 רגיל לא מכריח תמלוגים בכל העברה. לכן PrintChain מגביל העברות רגילות ומכריח מכירות לעבור דרך <code>PrintMarketplace</code>, שם אפשר לאכוף את חלוקת התשלום.</p>
+
+<h3>למה direct wallet-to-wallet transfers מוגבלים?</h3>
+
+<p>אם משתמשים היו יכולים להעביר NFT ישירות בין ארנקים, אפשר היה לעקוף תמלוגים והיסטוריית מכירה. לכן החוזה מגביל העברות רגילות ומאפשר העברות דרך controller/marketplace.</p>
+
+<h3>איך מוכיחים שהתמלוג עובד?</h3>
+
+<p>אפשר להוכיח בשלוש דרכים:</p>
+
+<p class="step">1. <strong>Balance changes</strong> — בודקים יתרות לפני ואחרי resale.</p>
+<p class="step">2. <strong>Tests</strong> — <code>test/PrintMarketplace.test.js</code> כולל בדיקה של 10% ליוצר ו-90% למוכר.</p>
+<p class="step">3. <strong>Ownership/sale history</strong> — אחרי מכירה יש רשומת <code>SALE</code> בהיסטוריה.</p>
+
+<h3>ומה עם ERC2981?</h3>
+
+<p>ERC2981 הוא תקן שמאפשר לחוזה NFT לחשוף מידע על royalty דרך <code>royaltyInfo</code>. דרישת הקורס בעברית מתמקדת בכך שבמעבר בעלות 10% יעבור ליוצר. בפרויקט זה המנגנון העיקרי הוא <strong>marketplace-enforced royalty</strong>. לכן גם אם ERC2981 אינו המנגנון המרכזי כאן, התמלוג נאכף במרקטפלייס המקומי.</p>
+
+<h2>10. IPFS, files, metadata, and CID</h2>
+
+<h3>מה זה IPFS?</h3>
+
+<p>IPFS הוא מערכת אחסון מבוזרת לקבצים. במקום לשמור קובץ לפי כתובת שרת, IPFS מזהה קובץ לפי התוכן שלו.</p>
+
+<h3>למה IPFS שימושי ל-NFT?</h3>
+
+<p>קבצי NFT יכולים להיות גדולים: תמונות, מודלים, מסמכים וקבצי ייצור. יקר ולא מתאים לשמור אותם בתוך Blockchain. לכן מקובל לשמור את הקובץ ב-IPFS ואת ה-CID בחוזה.</p>
+
+<h3>מה זה CID?</h3>
+
+<p>CID הוא Content Identifier — מזהה תוכן. אם התוכן משתנה, ה-CID משתנה. זה עוזר לוודא שהקישור מתייחס לתוכן מסוים.</p>
+
+<h3>מה זה ipfs://?</h3>
+
+<p><code>ipfs://CID</code> הוא URI שמצביע לתוכן ב-IPFS. דפדפנים רגילים לא תמיד פותחים אותו ישירות, ולכן משתמשים לפעמים ב-gateway כמו:</p>
+
+<pre><code>
+https://ipfs.io/ipfs/CID
+</code></pre>
+
+<h3>סוגי CID בפרויקט</h3>
+
+<ul>
+<li><strong>file CID</strong> — מזהה קובץ הייצור עצמו.</li>
+<li><strong>metadata CID</strong> — מזהה קובץ JSON שמתאר את ה-NFT.</li>
+<li><strong>preview CID</strong> — מזהה תמונת preview או render, אם יש.</li>
+</ul>
+
+<h3>מה metadata JSON כולל בדרך כלל?</h3>
+
+<ul>
+<li><code>name</code></li>
+<li><code>description</code></li>
+<li><code>image</code></li>
+<li><code>attributes</code></li>
+<li><code>fileCid</code></li>
+<li><code>category</code></li>
+<li><code>file type</code></li>
+<li>תיעוד או compatibility אם היוצר הזין.</li>
+</ul>
+
+<h3>מה הפרויקט עושה בפועל?</h3>
+
+<p>הפרויקט כולל adapter ב-<code>frontend/src/ipfs/uploadAdapter.js</code>.</p>
+
+<p>במצב ברירת מחדל מקומי:</p>
+
+<ul>
+<li>לא מתבצעת העלאה אמיתית ל-IPFS.</li>
+<li>נוצר CID דמו מסוג <code>mock-*</code>.</li>
+<li>מטא־דאטה קלה נשמרת ב-<code>sessionStorage</code> בדפדפן.</li>
+<li>קבצי preview גדולים לא נשמרים לצמיתות בדפדפן.</li>
+</ul>
+
+<p>אם מוגדר endpoint אמיתי דרך משתני סביבה, אפשר לחבר שירות IPFS אמיתי, אבל בפרויקט לא נשמרים מפתחות אמיתיים ולא צריך להוסיף סודות.</p>
+
+<h2>11. MetaMask</h2>
+
+<h3>מה זה MetaMask?</h3>
+
+<p>MetaMask הוא ארנק דפדפן שמאפשר להתחבר לאפליקציות Web3, להחזיק חשבונות, ולחתום עסקאות.</p>
+
+<h3>למה PrintChain צריך MetaMask?</h3>
+
+<p>כי פעולות כמו mint, list, cancel ו-buy הן עסקאות Blockchain. המשתמש צריך לאשר אותן בארנק.</p>
+
+<h3>חיבור ל-Hardhat localhost</h3>
+
+<p>בהדגמה מוסיפים ל-MetaMask רשת:</p>
+
+<ul>
+<li>RPC URL: <code>http://127.0.0.1:8545</code></li>
+<li>Chain ID: <code>31337</code></li>
+<li>Currency: <code>ETH</code></li>
+</ul>
+
+<h3>למה מייבאים חשבונות Hardhat?</h3>
+
+<p>כדי להשתמש באותם חשבונות שהרשת המקומית פתחה. החשבונות מקבלים 10000 ETH דמיוני, ולכן אפשר לבדוק רכישות ו-gas בלי כסף אמיתי.</p>
+
+<h3>מה קורה כשמאשרים עסקה?</h3>
+
+<p>MetaMask מציג:</p>
+
+<ul>
+<li>איזה חשבון שולח.</li>
+<li>לאיזה חוזה או כתובת.</li>
+<li>כמה ETH נשלח, אם בכלל.</li>
+<li>הערכת gas.</li>
+</ul>
+
+<p>אחרי אישור, העסקה נשלחת לרשת Hardhat המקומית.</p>
+
+<h3>תפקידי חשבונות בדמו</h3>
+
+<ul>
+<li>Account #0 — deployer / contract owner.</li>
+<li>Account #1 — creator / seller.</li>
+<li>Account #2 — buyer.</li>
+<li>Account #3 — resale buyer.</li>
+</ul>
+
+<h3>למה MetaMask לא תמיד מציג royalty?</h3>
+
+<p>התמלוג ליוצר נשלח כהעברה פנימית מתוך החוזה בזמן <code>buyLicense</code>. MetaMask Activity יכול להציג בעיקר את העסקה הראשית ולא כל internal transfer. לכן מאמתים דרך יתרות, tests או אירועים/היסטוריה.</p>
+
+<h2>12. web3.js</h2>
+
+<h3>מה זה web3.js?</h3>
+
+<p><code>web3.js</code> היא ספריית JavaScript שמאפשרת ל-Frontend לדבר עם Ethereum-compatible blockchain דרך provider כמו MetaMask.</p>
+
+<h3>למה הפרויקט משתמש ב-web3.js?</h3>
+
+<p>דרישת הפרויקט היא להשתמש ב-<code>web3.js</code> ב-Frontend. לכן <code>frontend/src/main.jsx</code> מייבא:</p>
+
+<pre><code>
+Web3 from "web3"
+</code></pre>
+
+<p>ומשתמש ב-<code>new web3.eth.Contract(abi, address)</code> כדי ליצור אובייקטי חוזה.</p>
+
+<h3>איך web3.js מדבר עם MetaMask?</h3>
+
+<p>MetaMask חושף בדפדפן אובייקט בשם <code>window.ethereum</code>. ה-Frontend יוצר Web3 עם provider זה. כאשר צריך לשלוח עסקה, MetaMask מבקש אישור מהמשתמש.</p>
+
+<h3>ABI + address</h3>
+
+<p>כדי לדבר עם חוזה צריך:</p>
+
+<ul>
+<li>ABI — אילו פונקציות ואירועים קיימים.</li>
+<li>Address — איפה החוזה נמצא ברשת.</li>
+</ul>
+
+<p>הקובץ <code>frontend/src/config/contracts.json</code> מכיל את הכתובות וה-ABI אחרי deploy מקומי.</p>
+
+<h3>call() לעומת send()</h3>
+
+<table>
+<tr><th>web3.js</th><th>שימוש</th><th>דוגמה</th></tr>
+<tr><td><code>.call()</code></td><td>קריאה חינמית שלא משנה מצב</td><td>לקרוא active listings או owner</td></tr>
+<tr><td><code>.send()</code></td><td>עסקה שדורשת MetaMask וגז</td><td>mint, list, buy</td></tr>
+</table>
+
+<h3>דוגמאות מהפרויקט</h3>
+
+<ul>
+<li>קריאת active listings: <code>PrintMarketplace.methods.getActiveListings().call()</code>.</li>
+<li>קריאת מידע NFT: <code>getLicenseInfo</code>, <code>ownerOf</code>, <code>getOwnershipHistory</code>.</li>
+<li>שליחת עסקאות: <code>mintLicense</code>, <code>listLicense</code>, <code>cancelListing</code>, <code>buyLicense</code>.</li>
+</ul>
+
+<h2>13. Frontend: React and Vite</h2>
+
+<h3>מה זה React?</h3>
+
+<p>React היא ספריית JavaScript לבניית ממשקי משתמש. היא מאפשרת לבנות UI מרכיבים, לשמור state, ולעדכן מסך לפי נתונים.</p>
+
+<h3>מה זה Vite?</h3>
+
+<p>Vite הוא כלי פיתוח ובנייה מהיר ל-Frontend. הוא מפעיל שרת dev ומייצר build production.</p>
+
+<h3>למה משתמשים בהם?</h3>
+
+<ul>
+<li>React מתאים לבניית DApp UI אינטראקטיבי.</li>
+<li>Vite מאפשר הרצה מהירה עם <code>npm run frontend</code> ובנייה עם <code>npm run build --prefix frontend</code>.</li>
+</ul>
+
+<h3>מה ה-Frontend עושה?</h3>
+
+<p>ה-Frontend ב-<code>frontend/src/main.jsx</code> אחראי ל:</p>
+
+<ul>
+<li>חיבור MetaMask.</li>
+<li>בדיקת Chain ID.</li>
+<li>טעינת חוזים מתוך <code>contracts.json</code>.</li>
+<li>הצגת Marketplace listings.</li>
+<li>הצגת PRINT balance.</li>
+<li>Mint רישיון NFT חדש.</li>
+<li>העלאת דמו/Mock metadata.</li>
+<li>List / cancel listing.</li>
+<li>Buy license NFT.</li>
+<li>הצגת Details והיסטוריה.</li>
+<li>הצגת My Owned Licenses.</li>
+<li>הצגת Created &amp; Sold Licenses.</li>
+<li>הפעלת x402 demo request מול ה-Backend.</li>
+</ul>
+
+<h3>קבצים חשובים</h3>
+
+<ul>
+<li><code>frontend/src/main.jsx</code> — רוב לוגיקת הממשק וה-Web3.</li>
+<li><code>frontend/src/ipfs/uploadAdapter.js</code> — mock/real upload adapter.</li>
+<li><code>frontend/src/styles.css</code> — עיצוב.</li>
+<li><code>frontend/package.json</code> — dependencies כמו React, Vite ו-web3.</li>
+</ul>
+
+<h2>14. Backend: Express server</h2>
+
+<h3>מה זה Backend?</h3>
+
+<p>Backend הוא שרת שמקבל בקשות HTTP ומחזיר תשובות. למרות ש-DApp משתמש בחוזים חכמים, עדיין לפעמים יש Backend לצרכים משלימים: API, העלאות, gating, previews או אינטגרציה עם שירותים.</p>
+
+<h3>למה יש Backend בפרויקט DApp?</h3>
+
+<p>ב-PrintChain ה-Backend מדגים x402/HTTP 402. הוא לא מחליף את החוזים ולא מבצע רכישת NFT. הוא רק מדגים route מוגן.</p>
+
+<h3>מה זה Express?</h3>
+
+<p>Express היא ספריית Node.js לבניית שרתי HTTP בצורה פשוטה.</p>
+
+<h3>Routes בפרויקט</h3>
+
+<ul>
+<li><code>GET /health</code> — מחזיר שהשרת עובד.</li>
+<li><code>GET /api/paid-preview/:tokenId</code> — route מוגן שמדגים HTTP 402.</li>
+</ul>
+
+<h3>קבצים חשובים</h3>
+
+<ul>
+<li><code>backend/server.js</code> — מגדיר את שרת Express ואת routes.</li>
+<li><code>backend/x402.js</code> — פונקציות עזר לבדיקת proof מוק ולהחזרת תשובות 402/200.</li>
+</ul>
+
+<h2>15. HTTP 402 and x402</h2>
+
+<h3>מה הם HTTP status codes?</h3>
+
+<p>כאשר דפדפן או <code>curl</code> שולחים בקשת HTTP, השרת מחזיר status code. לדוגמה:</p>
+
+<ul>
+<li><code>200 OK</code> — הצלחה.</li>
+<li><code>404 Not Found</code> — לא נמצא.</li>
+<li><code>500 Internal Server Error</code> — שגיאת שרת.</li>
+<li><code>402 Payment Required</code> — נדרש תשלום.</li>
+</ul>
+
+<h3>מה זה HTTP 402 Payment Required?</h3>
+
+<p>402 הוא קוד HTTP שמיועד למצבים שבהם נדרש תשלום לפני גישה למשאב. במשך שנים הוא כמעט לא היה בשימוש רחב, אבל כיום יש ניסיונות להשתמש בו עבור תשלומים באינטרנט.</p>
+
+<h3>מה זה x402 באופן רעיוני?</h3>
+
+<p>x402 הוא רעיון/פרוטוקול שמנסה להשתמש ב-HTTP 402 כדי לאפשר גישה בתשלום ל-API או תוכן. הרעיון: אם אין תשלום, השרת מחזיר 402 ומסביר איך לשלם; אחרי תשלום תקין, השרת מחזיר את התוכן.</p>
+
+<h3>איך PrintChain מדגים את זה?</h3>
+
+<p>הפרויקט כולל route:</p>
+
+<pre><code>
+GET /api/paid-preview/:tokenId
+</code></pre>
+
+<p>בלי הוכחת תשלום:</p>
+
+<pre><code>
+curl -i http://127.0.0.1:4000/api/paid-preview/1
+</code></pre>
+
+<p>השרת מחזיר HTTP 402.</p>
+
+<p>עם header דמו:</p>
+
+<pre><code>
+curl -i -H "x-printchain-demo-payment: paid" http://127.0.0.1:4000/api/paid-preview/1
+</code></pre>
+
+<p>השרת מחזיר HTTP 200 ונתוני preview דמו.</p>
+
+<h3>חשוב מאוד: זה מוק</h3>
+
+<p>ה-x402 בפרויקט הוא <strong>mocked x402-style local demo</strong>:</p>
+
+<ul>
+<li>אין סליקת תשלום אמיתית.</li>
+<li>אין אימות תשלום אמיתי.</li>
+<li>אין payment credentials.</li>
+<li>זה נפרד מרכישת NFT במרקטפלייס.</li>
+<li>רכישות NFT עדיין מתבצעות ב-ETH דרך <code>PrintMarketplace</code> ו-MetaMask.</li>
+</ul>
+
+<h2>16. Hardhat and local development</h2>
+
+<h3>מה זה Hardhat?</h3>
+
+<p>Hardhat הוא כלי פיתוח ל-Ethereum. הוא עוזר לקמפל חוזים, להריץ בדיקות, לפתוח רשת מקומית ולפרוס חוזים.</p>
+
+<h3>למה משתמשים בו?</h3>
+
+<p>כי הוא מאפשר לבנות DApp בלי להשתמש בכסף אמיתי ובלי להסתכן ברשת ציבורית.</p>
+
+<h3>פקודות חשובות</h3>
+
+<table>
+<tr><th>פקודה</th><th>מה היא עושה?</th></tr>
+<tr><td><code>npm run compile</code></td><td>מקמפלת חוזי Solidity</td></tr>
+<tr><td><code>npm test</code></td><td>מריצה בדיקות חוזים</td></tr>
+<tr><td><code>npx hardhat node</code></td><td>מפעילה Blockchain מקומי</td></tr>
+<tr><td><code>npm run deploy:local</code></td><td>פורסת חוזים לרשת המקומית וכותבת config ל-Frontend</td></tr>
+<tr><td><code>npm run seed:local</code></td><td>יוצרת נתוני דמו: PRINT reward, NFT, listing</td></tr>
+<tr><td><code>npm run backend</code></td><td>מפעילה שרת Express</td></tr>
+<tr><td><code>npm run frontend</code></td><td>מפעילה את אתר React/Vite</td></tr>
+</table>
+
+<h3>למה נוצרות כתובות חוזים מקומיות?</h3>
+
+<p>כל deploy יוצר חוזים חדשים עם כתובות חדשות. לכן צריך לעדכן את ה-Frontend. הסקריפט <code>deploy:local</code> כותב את <code>frontend/src/config/contracts.json</code>, וכך ה-Frontend יודע לאן לשלוח קריאות ועסקאות.</p>
+
+<h2>17. Tests</h2>
+
+<h3>למה Tests חשובים?</h3>
+
+<p>Tests עוזרים לוודא שהחוזים מתנהגים כפי שציפינו. בבלוקצ'יין קשה לתקן חוזים אחרי פריסה, ולכן חשוב לבדוק לפני.</p>
+
+<h3>מה הפרויקט בודק?</h3>
+
+<p>בדיקות ERC20:</p>
+
+<ul>
+<li>שם הטוקן נכון.</li>
+<li>סימול הטוקן נכון.</li>
+<li>אספקה ראשונית קיימת.</li>
+<li>העברות עובדות.</li>
+<li><code>mintReward</code> עובד לפי הרשאות.</li>
+</ul>
+
+<p>בדיקות NFT:</p>
+
+<ul>
+<li>יוצר יכול להטביע license NFT.</li>
+<li>נשמר creator נכון.</li>
+<li><code>tokenURI</code> נכון.</li>
+<li>timestamp נשמר.</li>
+<li>ownership history מתחיל ב-MINT.</li>
+<li>direct transfers מוגבלים.</li>
+</ul>
+
+<p>בדיקות Marketplace:</p>
+
+<ul>
+<li>בעלים יכול לבצע listing.</li>
+<li>מי שאינו בעלים לא יכול לבצע listing.</li>
+<li>אפשר לבטל listing.</li>
+<li>קונה יכול לקנות ב-ETH.</li>
+<li>NFT עובר לקונה.</li>
+<li>10% הולך ליוצר ו-90% למוכר ב-resale.</li>
+<li>היסטוריית SALE מתווספת.</li>
+<li>listing נמחק אחרי רכישה.</li>
+</ul>
+
+<h3>מה פירוש “30 passing”?</h3>
+
+<p>כאשר רואים בתוצאות בדיקה <code>30 passing</code>, זה אומר ש-30 מקרי בדיקה עברו בהצלחה. המספר המדויק יכול להשתנות אם מוסיפים או מסירים בדיקות, אבל המשמעות היא שכל הבדיקות שהורצו עברו.</p>
+
+<h2>18. Real vs mocked in this project</h2>
+
+<table>
+<tr><th>Component</th><th>Real local implementation?</th><th>Mock/demo?</th><th>Explanation</th></tr>
+<tr><td>Smart contracts</td><td>כן</td><td>לא</td><td>חוזי Solidity נפרסים ל-Hardhat local blockchain</td></tr>
+<tr><td>ERC20 PRINT</td><td>כן</td><td>לא</td><td><code>PrintToken</code> הוא ERC20 אמיתי ברשת המקומית</td></tr>
+<tr><td>ERC721 NFT</td><td>כן</td><td>לא</td><td><code>PrintLicenseNFT</code> הוא NFT אמיתי ברשת המקומית</td></tr>
+<tr><td>Marketplace</td><td>כן</td><td>לא</td><td><code>PrintMarketplace</code> מבצע listing, cancel ו-buy</td></tr>
+<tr><td>Royalties</td><td>כן, במרקטפלייס</td><td>לא</td><td><code>buyLicense</code> מחלק 10% ליוצר ו-90% למוכר</td></tr>
+<tr><td>Ownership history</td><td>כן</td><td>לא</td><td>נשמרת בחוזה כרשומות MINT/SALE</td></tr>
+<tr><td>Timestamps</td><td>כן</td><td>לא</td><td>נשמרים עם <code>block.timestamp</code></td></tr>
+<tr><td>MetaMask transactions</td><td>כן</td><td>לא</td><td>המשתמש מאשר עסקאות ברשת Hardhat המקומית</td></tr>
+<tr><td>IPFS upload/CIDs</td><td>חלקית</td><td>כן</td><td>נשמרים CIDs בחוזה, אבל ברירת המחדל יוצרת <code>mock-*</code> CIDs</td></tr>
+<tr><td>x402 payment settlement</td><td>לא</td><td>כן</td><td>route מחזיר 402/200 לפי proof מוק, בלי סליקה אמיתית</td></tr>
+<tr><td>Frontend</td><td>כן</td><td>לא</td><td>React/Vite app אמיתי מקומי</td></tr>
+<tr><td>Backend</td><td>כן</td><td>הדמו שבו מוק</td><td>Express server אמיתי, אך x402 verification מוק</td></tr>
+</table>
+
+<h2>19. Full demo flow explained</h2>
+
+<h3>פקודות דמו</h3>
+
+<pre><code>
+npm install
+</code></pre>
+
+<p>מתקין dependencies של הפרויקט הראשי.</p>
+
+<pre><code>
+npm install --prefix frontend
+</code></pre>
+
+<p>מתקין dependencies של ה-Frontend.</p>
+
+<pre><code>
+npm install --prefix backend
+</code></pre>
+
+<p>מתקין dependencies של ה-Backend.</p>
+
+<pre><code>
+npx hardhat node
+</code></pre>
+
+<p>מפעיל Blockchain מקומי. להשאיר פתוח בטרמינל נפרד.</p>
+
+<pre><code>
+npm run deploy:local
+</code></pre>
+
+<p>פורס את <code>PrintToken</code>, <code>PrintLicenseNFT</code> ו-<code>PrintMarketplace</code>, מגדיר transfer controller, וכותב <code>contracts.json</code> ל-Frontend.</p>
+
+<pre><code>
+npm run seed:local
+</code></pre>
+
+<p>יוצר נתוני דמו: PRINT reward ליוצר, NFT דמו, CIDs דמיוניים ו-listing.</p>
+
+<pre><code>
+npm run backend
+</code></pre>
+
+<p>מפעיל את שרת Express עבור x402 demo.</p>
+
+<pre><code>
+npm run frontend
+</code></pre>
+
+<p>מפעיל את אתר React/Vite.</p>
+
+<h3>מה לבדוק ב-UI?</h3>
+
+<p class="step">1. להתחבר עם MetaMask לרשת <code>localhost:8545</code>, Chain ID <code>31337</code>.</p>
+<p class="step">2. לראות marketplace listing שנוצר ב-seed.</p>
+<p class="step">3. לפתוח פרטי NFT ולראות creator, owner, CID, timestamp והיסטוריה.</p>
+<p class="step">4. להטביע NFT חדש דרך Mint.</p>
+<p class="step">5. לראות את NFT ב-My Owned Licenses.</p>
+<p class="step">6. לבצע list למכירה.</p>
+<p class="step">7. לבצע cancel listing.</p>
+<p class="step">8. לבצע list מחדש.</p>
+<p class="step">9. לעבור לחשבון buyer ולקנות.</p>
+<p class="step">10. לבדוק שה-owner השתנה.</p>
+<p class="step">11. לבצע resale מחשבון buyer לקונה נוסף.</p>
+<p class="step">12. לאמת 10% royalty ליוצר המקורי.</p>
+<p class="step">13. לבדוק Created &amp; Sold Licenses אצל היוצר.</p>
+<p class="step">14. לבדוק x402 ללא header ולקבל 402.</p>
+<p class="step">15. לבדוק x402 עם header ולקבל 200.</p>
+
+<h2>20. Glossary</h2>
+
+<table>
+<tr><th>מושג</th><th>הסבר פשוט</th></tr>
+<tr><td>DApp</td><td>אפליקציה שמחוברת לחוזים חכמים ב-Blockchain</td></tr>
+<tr><td>Blockchain</td><td>יומן עסקאות מבוזר שמורכב מבלוקים</td></tr>
+<tr><td>Ethereum</td><td>רשת Blockchain שמריצה חוזים חכמים</td></tr>
+<tr><td>EVM</td><td>המכונה הווירטואלית שמריצה חוזי Ethereum</td></tr>
+<tr><td>Smart contract</td><td>תוכנית שרצה על Blockchain ומנהלת כללים ונתונים</td></tr>
+<tr><td>Solidity</td><td>שפת תכנות לחוזים חכמים ב-Ethereum</td></tr>
+<tr><td>Hardhat</td><td>כלי פיתוח לקימפול, בדיקה ופריסה של חוזים</td></tr>
+<tr><td>Gas</td><td>עמלת חישוב/אחסון עבור עסקה בבלוקצ'יין</td></tr>
+<tr><td>Transaction</td><td>פעולה חתומה שמשנה מצב בבלוקצ'יין</td></tr>
+<tr><td>Wallet</td><td>כלי שמחזיק חשבונות וחותם עסקאות</td></tr>
+<tr><td>Address</td><td>כתובת ציבורית של חשבון או חוזה</td></tr>
+<tr><td>Private key</td><td>סוד שמאפשר לשלוט בחשבון; אסור לשתף</td></tr>
+<tr><td>MetaMask</td><td>ארנק דפדפן נפוץ ל-DApps</td></tr>
+<tr><td>ERC20</td><td>תקן לטוקנים זהים/ניתנים להחלפה</td></tr>
+<tr><td>ERC721</td><td>תקן לטוקנים ייחודיים, NFT</td></tr>
+<tr><td>NFT</td><td>טוקן ייחודי שמייצג פריט או רישיון</td></tr>
+<tr><td>Token ID</td><td>מזהה מספרי ייחודי של NFT</td></tr>
+<tr><td>TokenURI</td><td>קישור למטא־דאטה של NFT</td></tr>
+<tr><td>Metadata</td><td>נתוני תיאור כמו שם, תיאור, תמונה ו-attributes</td></tr>
+<tr><td>IPFS</td><td>מערכת אחסון מבוזרת לקבצים</td></tr>
+<tr><td>CID</td><td>מזהה תוכן ב-IPFS</td></tr>
+<tr><td>Marketplace</td><td>חוזה/מערכת למכירה וקנייה של NFTs</td></tr>
+<tr><td>Royalty</td><td>תמלוג ליוצר מקורי ממכירה</td></tr>
+<tr><td>Creator</td><td>היוצר המקורי של הרישיון/NFT</td></tr>
+<tr><td>Seller</td><td>הבעלים הנוכחי שמוכר NFT</td></tr>
+<tr><td>Buyer</td><td>משתמש שקונה NFT</td></tr>
+<tr><td>ABI</td><td>תיאור פונקציות ואירועים של חוזה עבור תוכנה חיצונית</td></tr>
+<tr><td>web3.js</td><td>ספרייה שמחברת JavaScript ל-Ethereum/MetaMask</td></tr>
+<tr><td>React</td><td>ספרייה לבניית ממשקי משתמש</td></tr>
+<tr><td>Vite</td><td>כלי פיתוח ובנייה מהיר ל-Frontend</td></tr>
+<tr><td>Backend</td><td>שרת שמספק API או לוגיקה משלימה</td></tr>
+<tr><td>Express</td><td>ספריית Node.js לבניית שרת HTTP</td></tr>
+<tr><td>HTTP</td><td>פרוטוקול בקשות/תשובות של האינטרנט</td></tr>
+<tr><td>HTTP 402</td><td>קוד סטטוס שמשמעותו Payment Required</td></tr>
+<tr><td>x402</td><td>רעיון/פרוטוקול לגישה בתשלום דרך HTTP 402</td></tr>
+<tr><td>Mock/demo</td><td>מימוש דמה ללימוד, לא מערכת production אמיתית</td></tr>
+<tr><td>Localhost</td><td>המחשב המקומי, בדרך כלל <code>127.0.0.1</code></td></tr>
+<tr><td>Chain ID</td><td>מזהה רשת Blockchain, למשל 31337 ב-Hardhat</td></tr>
+<tr><td>Sepolia/mainnet</td><td>Sepolia היא רשת בדיקה ציבורית; mainnet היא רשת אמיתית עם כסף אמיתי</td></tr>
+</table>
+
+<h2>21. Final summary</h2>
+
+<p>אחרי קריאת המדריך, כדאי להבין ש-PrintChain הוא DApp לימודי שמחבר כמה טכנולוגיות:</p>
+
+<ul>
+<li>Solidity smart contracts מנהלים טוקנים, NFT, marketplace, היסטוריה ותמלוגים.</li>
+<li>Hardhat מספק רשת Blockchain מקומית ובטוחה ללימוד.</li>
+<li>MetaMask מאפשר למשתמש לחתום עסקאות.</li>
+<li>web3.js מאפשר ל-Frontend לדבר עם MetaMask והחוזים.</li>
+<li>React/Vite מספקים UI נוח לדמו.</li>
+<li>Express מספק route דמו ל-HTTP 402 / x402-style.</li>
+<li>IPFS מיוצג דרך CIDs, אך במצב המקומי ברירת המחדל היא mock/demo.</li>
+</ul>
+
+<h3>מה לומר אם המרצה שואל?</h3>
+
+<p><strong>מה אמיתי?</strong></p>
+
+<p>החוזים, ERC20, ERC721, Marketplace, העברת NFT, היסטוריית בעלות, timestamps ותמלוג 10% דרך המרקטפלייס אמיתיים ברשת Hardhat מקומית.</p>
+
+<p><strong>מה מוק?</strong></p>
+
+<p>IPFS במצב ברירת מחדל הוא mock CIDs, ו-x402 הוא mock payment proof. אין סליקה אמיתית ואין העלאת IPFS אמיתית אלא אם מחברים endpoint חיצוני.</p>
+
+<p><strong>איך נאכף 10% royalty?</strong></p>
+
+<p>דרך <code>PrintMarketplace.buyLicense</code>: החוזה מחשב 10% מהמחיר ליוצר המקורי ו-90% למוכר, ואז מעביר את ה-NFT לקונה ורושם היסטוריה.</p>
+
+<p><strong>למה להשתמש ב-IPFS?</strong></p>
+
+<p>כי קבצי ייצור גדולים לא מתאימים לאחסון ישיר בבלוקצ'יין. שומרים CID בחוזה והקובץ עצמו אמור להיות מחוץ לשרשרת.</p>
+
+<p><strong>למה להשתמש ב-x402?</strong></p>
+
+<p>כדי להדגים גישה בתשלום לתוכן או API. בפרויקט זה הדמו מראה 402 ללא proof ו-200 עם proof מוק.</p>
+
+<p><strong>למה להשתמש ב-MetaMask?</strong></p>
+
+<p>כי המשתמש צריך לחתום עסקאות Blockchain כמו mint, list ו-buy.</p>
+
+<p><strong>למה להשתמש ב-web3.js?</strong></p>
+
+<p>כי ה-Frontend צריך דרך לדבר עם MetaMask ועם החוזים באמצעות ABI וכתובות חוזים, ודרישת הפרויקט היא להשתמש ב-web3.js בצד הלקוח.</p>
+
+<h2>נספח: יצירת PDF מקומית</h2>
+
+<p>בסביבת פיתוח שבה קיים Chrome/Chromium או <code>wkhtmltopdf</code>, אפשר להריץ:</p>
+
+<pre><code>
+npm run guide:technology
+</code></pre>
+
+<p>אם אין מנוע PDF מותקן, הסקריפט עדיין יוצר HTML קריא בנתיב:</p>
+
+<pre><code>
+docs/PRINTCHAIN_TECHNOLOGY_GUIDE_HE.html
+</code></pre>
+
+<p>כדי ליצור PDF ידנית:</p>
+
+<p class="step">1. פתחו את קובץ ה-HTML בדפדפן Chrome.</p>
+<p class="step">2. בחרו Print.</p>
+<p class="step">3. בחרו Save as PDF.</p>
+<p class="step">4. שמרו בשם <code>docs/PRINTCHAIN_TECHNOLOGY_GUIDE_HE.pdf</code>.</p>
+
+<p>אפשרות נוספת היא להתקין <code>chromium</code> או <code>wkhtmltopdf</code> ואז להריץ שוב <code>npm run guide:technology</code>.</p>
+
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>דוח התאמת פרויקט PrintChain לדרישות קורס DApp</title>
+  <style>
+    @page { size: A4; margin: 18mm 14mm; }
+    body { direction: rtl; font-family: "DejaVu Sans", "Arial", sans-serif; line-height: 1.55; color: #1f2937; background: #fff; }
+    h1, h2, h3 { color: #111827; page-break-after: avoid; }
+    h1 { text-align: center; font-size: 26px; border-bottom: 3px solid #2563eb; padding-bottom: 10px; }
+    h2 { margin-top: 28px; font-size: 21px; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; }
+    h3 { font-size: 17px; margin-top: 20px; }
+    p, li { font-size: 13.5px; }
+    code, pre { direction: ltr; unicode-bidi: embed; font-family: "DejaVu Sans Mono", monospace; background: #f3f4f6; border-radius: 4px; }
+    code { padding: 1px 4px; }
+    pre { padding: 10px; overflow-wrap: break-word; white-space: pre-wrap; border: 1px solid #e5e7eb; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 11px; page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    th, td { border: 1px solid #d1d5db; padding: 6px; vertical-align: top; }
+    th { background: #e0ecff; color: #111827; }
+    blockquote { border-right: 4px solid #2563eb; margin: 12px 0; padding: 8px 14px; background: #eff6ff; }
+  </style>
+</head>
+<body>
+<h1>דוח התאמת פרויקט PrintChain לדרישות קורס DApp</h1>
+
+<blockquote>דוח זה נכתב לאחר בדיקה של קבצי הפרויקט בפועל: <code>contracts/</code>, <code>scripts/</code>, <code>test/</code>, <code>frontend/</code>, <code>backend/</code>, <code>docs/</code>, <code>README.md</code> וקבצי <code>package.json</code>. הדוח מבחין בין מימוש אמיתי על רשת Hardhat מקומית לבין רכיבי דמו/מוק.</blockquote>
+
+<h2>1. תקציר הפרויקט</h2>
+
+<p><strong>PrintChain</strong> הוא פרויקט DApp חינוכי לשוק רישיונות דיגיטליים לקבצי ייצור: STL, STEP, 3MF, G-code, CNC, ZIP, PDF, שרטוטים טכניים ותצוגות מקדימות. הרעיון המרכזי הוא שיוצר מעלה קובץ ייצור ומטא־דאטה ל-IPFS או למצב דמו מקומי, מטביע NFT שמייצג רישיון שימוש/הדפסה/ייצור, ומוכר את הרישיון דרך חוזה Marketplace.</p>
+
+<p>הפרויקט הוא DApp משום שהוא משלב:</p>
+
+<ul>
+<li>חוזים חכמים ב-Solidity שרצים על רשת Hardhat מקומית.</li>
+<li>ERC20 בשם <code>PrintToken</code> עם סימול <code>PRINT</code> לצבירת תגמולים.</li>
+<li>ERC721 בשם <code>PrintLicenseNFT</code> לרישיונות ייצור/שימוש.</li>
+<li>חוזה <code>PrintMarketplace</code> לקנייה ומכירה ב-ETH מקומי, כולל תמלוג של 10% ליוצר המקורי.</li>
+<li>ממשק React/Vite שמתחבר ל-MetaMask דרך <code>web3.js</code>.</li>
+<li>שרת Backend קטן שמדגים התנהגות HTTP 402 / x402-style.</li>
+</ul>
+
+<p>הבעיה שהפרויקט פותר היא ניהול ומסחר ברישיונות שימוש לקבצי ייצור דיגיטליים, תוך שמירה על בעלות, היסטוריה, מחיר ותאריכים על גבי הבלוקצ'יין המקומי. חשוב: ה-NFT אינו מתואר רק כ"בעלות על STL", אלא כ-<strong>רישיון להשתמש, להדפיס או לייצר את המודל/הקובץ הדיגיטלי</strong>.</p>
+
+<h2>2. טבלת מיפוי דרישות הקורס</h2>
+
+<table>
+<tr><th>דרישה</th><th>משמעות הדרישה</th><th>איך זה מיושם בפרויקט</th><th>קבצים/חוזים/פונקציות רלוונטיים</th><th>איך מדגימים בפועל</th><th>סטטוס</th></tr>
+<tr><td>פרויקט DApp</td><td>אפליקציה מבוזרת עם חוזים חכמים וממשק משתמש</td><td>חוזי Solidity + Frontend React + MetaMask + Hardhat מקומי</td><td><code>contracts/*.sol</code>, <code>frontend/src/main.jsx</code>, <code>hardhat.config.js</code></td><td>מפעילים Hardhat, deploy, seed, frontend ומתחברים עם MetaMask</td><td>עומד</td></tr>
+<tr><td>מטבע ERC20</td><td>טוקן רגיל לפי תקן ERC20</td><td><code>PrintToken</code> יורש מ-OpenZeppelin <code>ERC20</code>, שם <code>PrintToken</code>, סימול <code>PRINT</code>, <code>mintReward</code> לבעלים</td><td><code>contracts/PrintToken.sol</code>, <code>test/PrintToken.test.js</code></td><td>בודקים שם/סימול/העברות/תגמול, רואים יתרת PRINT בממשק</td><td>עומד</td></tr>
+<tr><td>מטבע NFT</td><td>טוקן ERC721 ייחודי</td><td><code>PrintLicenseNFT</code> יורש מ-<code>ERC721URIStorage</code>; כל NFT הוא רישיון שימוש/ייצור</td><td><code>contracts/PrintLicenseNFT.sol</code>, <code>mintLicense</code>, <code>tokenURI</code></td><td>מטביעים רישיון חדש דרך UI או seed ורואים tokenId ופרטי רישיון</td><td>עומד</td></tr>
+<tr><td>NFT עם זיכרון של בעלים</td><td>החוזה שומר היסטוריית בעלויות ולא רק בעלים נוכחי</td><td>מערך <code>OwnershipRecord[]</code> לכל token, כולל <code>previousOwner</code>, <code>newOwner</code>, מחיר, timestamp וסוג פעולה</td><td><code>getOwnershipHistory</code>, <code>_recordOwnershipHistory</code>, <code>controlledTransferFrom</code></td><td>במסך Details/My Licenses רואים היסטוריית MINT ו-SALE</td><td>עומד</td></tr>
+<tr><td>מעבר בעלות מחייב 10% ליוצר</td><td>מכירה דרך marketplace מחלקת ETH: 10% ליוצר המקורי ו-90% למוכר</td><td><code>buyLicense</code> מחשב <code>royaltyAmount = price * 1000 / 10000</code> ושולח ל-creator</td><td><code>contracts/PrintMarketplace.sol</code>, <code>buyLicense</code>, <code>ROYALTY_BASIS_POINTS</code></td><td>מבצעים resale ובודקים יתרות או מריצים test שמאמת 10%/90%</td><td>עומד במרקטפלייס המקומי</td></tr>
+<tr><td>תאריכים בחוזים</td><td>שמירת timestamps בחוזה</td><td>שימוש ב-<code>block.timestamp</code> בעת mint, listing, sale/history</td><td><code>createdAt</code>, <code>listedAt</code>, <code>OwnershipRecord.timestamp</code>, אירועים</td><td>רואים תאריך mint/list/sale בהיסטוריה ובפרטי NFT</td><td>עומד</td></tr>
+<tr><td>צבירת היסטוריה</td><td>שמירת רשומות היסטוריות לאורך זמן</td><td><code>OwnershipRecord[]</code> צובר MINT ו-SALE; כל רשומה כוללת גם price ולכן משמשת גם כהיסטוריית מחיר בסיסית</td><td><code>getOwnershipHistory</code>, tests של marketplace</td><td>מבצעים כמה מכירות ורואים רשומות מצטברות</td><td>עומד חלקית: אין פונקציית <code>getPriceHistory</code> נפרדת</td></tr>
+<tr><td>העלאת מסמכים ורישום IPFS</td><td>קובץ ומטא־דאטה נשמרים מחוץ לשרשרת, וה-CID נשמר בחוזה</td><td>החוזה שומר <code>fileCid</code>, <code>metadataCid</code>, <code>tokenURI</code>; frontend יוצר CID מוק במצב ברירת מחדל או משתמש endpoint חיצוני אם הוגדר</td><td><code>mintLicense</code>, <code>frontend/src/ipfs/uploadAdapter.js</code></td><td>מעלים קובץ דרך Mint; במצב מקומי מתקבל <code>mock-*</code> CID; עם endpoint אמיתי ניתן לקבל CID אמיתי</td><td>דמו/עומד חלקית</td></tr>
+<tr><td>MetaMask</td><td>הפעלה מארנק דפדפן וחתימת עסקאות</td><td>frontend משתמש ב-<code>window.ethereum</code>, מבקש <code>eth_requestAccounts</code>, מצפה Chain ID 31337</td><td><code>frontend/src/main.jsx</code>, <code>connectWallet</code></td><td>מוסיפים רשת localhost ל-MetaMask ומתחברים עם חשבונות Hardhat</td><td>עומד</td></tr>
+<tr><td>חוזה יחסית מורכב</td><td>יותר מחוזה פשוט: אינטראקציה בין חוזים, הרשאות, היסטוריה ותמלוגים</td><td>ERC20 + ERC721 + Marketplace; restricted transfers; sale records; royalty split; active listings</td><td><code>PrintToken.sol</code>, <code>PrintLicenseNFT.sol</code>, <code>PrintMarketplace.sol</code></td><td>מריצים tests ו-demo flow</td><td>עומד</td></tr>
+<tr><td>ממשק אינטרנטי</td><td>UI להצגת marketplace, mint, buying, history, rewards</td><td>React/Vite single-page app עם מסכים/אזורים ל-marketplace, mint, owned licenses, created/sold, rewards ו-x402 demo</td><td><code>frontend/src/main.jsx</code>, <code>frontend/src/styles.css</code></td><td><code>npm run frontend</code>, כניסה לכתובת Vite</td><td>עומד</td></tr>
+<tr><td>יישום web3.js</td><td>שימוש בספריית web3.js בצד הלקוח</td><td>frontend מייבא <code>Web3</code> מ-<code>web3</code> ובונה <code>new web3.eth.Contract</code></td><td><code>frontend/src/main.jsx</code>, <code>frontend/package.json</code></td><td>פעולות קריאה וטרנזקציות מתבצעות דרך web3.js</td><td>עומד</td></tr>
+<tr><td>יישום x402</td><td>הדגמת HTTP 402 Payment Required</td><td>backend route מחזיר 402 בלי הוכחת תשלום מוק, ו-200 עם header <code>x-printchain-demo-payment: paid</code></td><td><code>backend/server.js</code>, <code>backend/x402.js</code></td><td><code>curl</code> ללא header מחזיר 402; עם header מחזיר 200</td><td>דמו מוק, לא סליקה אמיתית</td></tr>
+<tr><td>ERC2981 royalty support</td><td>חשיפת royalty info בתקן NFT royalties</td><td>בבדיקה הנוכחית לא נמצאו ירושה מ-<code>ERC2981</code> או פונקציית <code>royaltyInfo</code> ב-<code>PrintLicenseNFT</code></td><td><code>contracts/PrintLicenseNFT.sol</code></td><td>אי אפשר להדגים <code>royaltyInfo</code> תקני בלי שינוי חוזה</td><td>חסר/עומד חלקית ביחס למסמך הפרויקט</td></tr>
+</table>
+
+<h2>3. פירוט לפי דרישה</h2>
+
+<h3>ERC20: PrintToken / PRINT</h3>
+
+<p>הדרישה למטבע ERC20 ממומשת בחוזה <code>PrintToken</code>. החוזה יורש מ-OpenZeppelin <code>ERC20</code> ו-<code>Ownable</code>, מגדיר שם <code>PrintToken</code> וסימול <code>PRINT</code>, ומטביע אספקה ראשונית ל-deployer בזמן הפריסה. הפונקציה <code>mintReward(address to, uint256 amount)</code> מאפשרת לבעלים להטביע תגמולי PRINT למשתמשים.</p>
+
+<p>במודל הפרויקט, PRINT הוא <strong>טוקן תגמול/נאמנות</strong>, לא מטבע התשלום המרכזי. רכישות ב-Marketplace מתבצעות ב-ETH מקומי של רשת Hardhat. קובץ הבדיקות <code>test/PrintToken.test.js</code> בודק שם, סימול, אספקה ראשונית, העברות ו-minting של תגמולים.</p>
+
+<h3>NFT: PrintLicenseNFT</h3>
+
+<p>הדרישה ל-NFT ממומשת בחוזה <code>PrintLicenseNFT</code>, שהוא ERC721 עם אחסון URI. כל NFT מייצג <strong>רישיון להשתמש, להדפיס או לייצר את המודל/הקובץ הדיגיטלי</strong>. החוזה שומר נתונים מרכזיים:</p>
+
+<ul>
+<li><code>tokenId</code></li>
+<li>כתובת היוצר המקורי <code>creator</code></li>
+<li>כותרת ותיאור</li>
+<li><code>fileCid</code></li>
+<li><code>metadataCid</code></li>
+<li><code>tokenURI</code></li>
+<li>זמן יצירה <code>createdAt</code></li>
+<li>מחיר התחלתי <code>initialPrice</code></li>
+</ul>
+
+<p>הפונקציה המרכזית היא <code>mintLicense(...)</code>, שמטביעה NFT חדש, שומרת את פרטי הרישיון, שומרת URI למטא־דאטה, ומוסיפה רשומת היסטוריה ראשונה מסוג <code>MINT</code>.</p>
+
+<h3>NFT עם זיכרון של בעלים והיסטוריה</h3>
+
+<p>הפרויקט שומר זיכרון בעלים באמצעות <code>OwnershipRecord[]</code> לכל NFT. כל רשומה כוללת:</p>
+
+<ul>
+<li><code>previousOwner</code></li>
+<li><code>newOwner</code></li>
+<li><code>price</code></li>
+<li><code>timestamp</code></li>
+<li><code>actionType</code>, למשל <code>MINT</code> או <code>SALE</code></li>
+</ul>
+
+<p>בעת mint נרשמת בעלות ראשונה מכתובת אפס לכתובת היוצר. בעת מכירה דרך marketplace, הפונקציה <code>controlledTransferFrom(...)</code> מעבירה את ה-NFT ומוסיפה רשומת <code>SALE</code>. ההיסטוריה נקראת דרך <code>getOwnershipHistory(tokenId)</code> ומוצגת בממשק.</p>
+
+<h3>10% תמלוג ליוצר המקורי</h3>
+
+<p>הדרישה למעבר בעלות עם 10% ליוצר מיושמת בחוזה <code>PrintMarketplace</code>. כאשר קונה קורא ל-<code>buyLicense(tokenId)</code> ושולח בדיוק את המחיר ב-ETH:</p>
+
+<ul>
+<li>החוזה שולף את היוצר המקורי מתוך <code>getLicenseInfo(tokenId)</code>.</li>
+<li>מחשב <code>royaltyAmount</code> כ-10% מהמחיר.</li>
+<li>מחשב <code>sellerAmount</code> כ-90% מהמחיר.</li>
+<li>מעביר את ה-NFT לקונה דרך <code>controlledTransferFrom</code>.</li>
+<li>שולח ETH ליוצר ולמוכר.</li>
+</ul>
+
+<p>בדיקת <code>PrintMarketplace</code> כוללת תרחיש resale שבו היוצר המקורי מקבל 10% והמוכר הנוכחי 90%. חשוב להסביר בהדגמה ש-MetaMask לא תמיד מציג העברה פנימית מחוזה כחיווי Activity נפרד, ולכן מאמתים את התמלוגים באמצעות יתרות או בדיקות אוטומטיות.</p>
+
+<p>הערה חשובה: אכיפת התמלוגים מתבצעת <strong>בתוך המרקטפלייס של הפרויקט</strong>. אם NFT היה עובר מחוץ למרקטפלייס, התמלוג לא היה נאכף שם. בפרויקט זה העברות רגילות מוגבלות כדי לעודד מכירות דרך marketplace.</p>
+
+<h3>תאריכים שנרשמים בחוזים</h3>
+
+<p>החוזים משתמשים ב-<code>block.timestamp</code> במספר נקודות:</p>
+
+<ul>
+<li><code>createdAt</code> בעת mint של רישיון חדש.</li>
+<li><code>listedAt</code> בעת יצירת listing במרקטפלייס.</li>
+<li><code>OwnershipRecord.timestamp</code> בעת MINT/SALE.</li>
+<li>אירועים כגון <code>LicenseMinted</code>, <code>LicenseListed</code>, <code>LicenseSold</code>, <code>LicenseDelisted</code> כוללים timestamp.</li>
+</ul>
+
+<p>כך אפשר להציג בממשק מתי נוצר הרישיון, מתי הוא נמכר ומתי השתנתה בעלות.</p>
+
+<h3>צבירת היסטוריה</h3>
+
+<p>היסטוריה נצברת במערך רשומות לכל NFT. הרשומות נשארות בחוזה וניתן לקרוא אותן דרך frontend. ההיסטוריה כוללת גם מחיר בכל שינוי בעלות, ולכן היא משמשת כהיסטוריה בסיסית של מחירים.</p>
+
+<p>ממצא בדיקה: במסמך התכנון הופיעה דרישה לפונקציה <code>getPriceHistory(...)</code>, אך בחוזה הנוכחי אין פונקציה נפרדת בשם זה ואין מערך price history נפרד. בפועל המחירים נשמרים בתוך <code>OwnershipRecord.price</code>. לכן הדרישה של היסטוריה עומדת, אך דרישה ספציפית ל-price history נפרד עומדת חלקית בלבד.</p>
+
+<h3>IPFS</h3>
+
+<p>החוזה אינו שומר קבצים מלאים בבלוקצ'יין, אלא רק CIDs ו-URI:</p>
+
+<ul>
+<li><code>fileCid</code></li>
+<li><code>metadataCid</code></li>
+<li><code>tokenURI</code>, לדוגמה <code>ipfs://...</code></li>
+</ul>
+
+<p>ב-frontend יש adapter בשם <code>uploadAdapter.js</code>. אם לא מוגדר endpoint אמיתי להעלאה, adapter יוצר CID דמו מסוג <code>mock-*</code> על בסיס hash מקומי ושומר מטא־דאטה קלה ב-sessionStorage. זה טוב להדגמה מקומית, אך אינו IPFS אמיתי. אם מגדירים <code>VITE_IPFS_UPLOAD_ENDPOINT</code>, אפשר לחבר שירות העלאה אמיתי, אך אין בפרויקט מפתחות אמיתיים ואין להוסיף מפתחות פרטיים.</p>
+
+<p>לכן: רישום CID בחוזה קיים; העלאה אמיתית ל-IPFS היא אפשרות חיבור/הרחבה, ובמצב המקומי היא מוק/דמו.</p>
+
+<h3>MetaMask</h3>
+
+<p>הממשק מתחבר ל-MetaMask דרך <code>window.ethereum</code>. הפונקציה <code>connectWallet</code> מבקשת הרשאת חשבונות עם <code>eth_requestAccounts</code>, יוצרת מופע <code>Web3</code>, קוראת Chain ID ומעדכנת את כתובת הארנק.</p>
+
+<p>להדגמה משתמשים ברשת Hardhat מקומית:</p>
+
+<ul>
+<li>RPC URL: <code>http://127.0.0.1:8545</code></li>
+<li>Chain ID: <code>31337</code></li>
+<li>Currency symbol: <code>ETH</code></li>
+</ul>
+
+<p>יש להשתמש רק בחשבונות בדיקה של Hardhat. אין להשתמש במפתחות האלה ב-mainnet או בכל רשת אמיתית.</p>
+
+<h3>חוזה יחסית מורכב</h3>
+
+<p>הפרויקט כולל שלושה חוזים שמשתפים פעולה:</p>
+
+<p>1. <code>PrintToken</code> — ERC20 לתגמולים.</p>
+<p>2. <code>PrintLicenseNFT</code> — ERC721 לרישיון ייצור/שימוש, כולל היסטוריית בעלות והגבלת העברות.</p>
+<p>3. <code>PrintMarketplace</code> — listing, ביטול listing, קנייה ב-ETH, תמלוג 10%, העברת NFT והסרת listing.</p>
+
+<p>המורכבות כוללת הרשאות <code>Ownable</code>, מגבלת העברות כדי שהיסטוריה ותמלוגים יישמרו, ניהול מערך active listings, חלוקת כספים, אירועים ובדיקות אוטומטיות.</p>
+
+<h3>ממשק אינטרנטי</h3>
+
+<p>הממשק נמצא תחת <code>frontend/</code> ונבנה ב-React עם Vite. הוא מציג:</p>
+
+<ul>
+<li>Marketplace listings.</li>
+<li>חיבור Wallet ומצב רשת.</li>
+<li>יתרת PRINT.</li>
+<li>טופס Mint לרישיון חדש.</li>
+<li>פרטי NFT והיסטוריה.</li>
+<li>My Owned Licenses.</li>
+<li>Created &amp; Sold Licenses.</li>
+<li>פעולות list/cancel/buy.</li>
+<li>כפתור/בדיקה ל-x402 demo.</li>
+</ul>
+
+<h3>web3.js</h3>
+
+<p>ב-frontend נעשה שימוש מפורש ב-<code>web3.js</code> ולא ב-ethers.js. הקובץ <code>frontend/package.json</code> כולל dependency בשם <code>web3</code>, וב-<code>frontend/src/main.jsx</code> יש <code>import Web3 from "web3"</code>. החוזים נטענים עם <code>new web3.eth.Contract(abi, address)</code>, ועסקאות נשלחות דרך MetaMask.</p>
+
+<p>שימוש ב-ethers.js קיים בסקריפטי Hardhat ובבדיקות Node.js בלבד, לא ב-frontend. זה מקובל משום שדרישת הקורס לגבי <code>web3.js</code> היא לממשק ה-DApp בצד המשתמש.</p>
+
+<h3>x402 / HTTP 402</h3>
+
+<p>ה-backend מממש route:</p>
+
+<pre><code>
+GET /api/paid-preview/:tokenId
+</code></pre>
+
+<p>אם הבקשה מגיעה בלי הוכחת תשלום מוק, השרת מחזיר HTTP 402 Payment Required עם JSON שמסביר איך לשלוח proof דמו. אם הבקשה כוללת header:</p>
+
+<pre><code>
+x-printchain-demo-payment: paid
+</code></pre>
+
+<p>או query מתאים, השרת מחזיר 200 עם משאב protected preview דמיוני.</p>
+
+<p>זהו <strong>דמו x402-style בלבד</strong>. אין סליקת תשלום אמיתית, אין אימות מול רשת תשלומים ואין credentials. זה מסומן כך בקוד ובתיעוד, ומתאים לדרישת קורס שמבקשת הדגמת HTTP 402 בסיסית.</p>
+
+<h3>ERC2981 royaltyInfo</h3>
+
+<p>במסמכי הפרויקט המקוריים הופיעה דרישה לתמיכה ב-ERC2981. בבדיקה הנוכחית של החוזה <code>PrintLicenseNFT</code> לא נמצאה ירושה מ-<code>ERC2981</code> ולא נמצאה פונקציה <code>royaltyInfo</code>. לכן תמיכה תקנית ב-ERC2981 אינה קיימת כרגע.</p>
+
+<p>עם זאת, אכיפת 10% תמלוג בפועל דרך <code>PrintMarketplace.buyLicense</code> קיימת ונבדקת. מבחינת דרישת הקורס בעברית, "מעבר מבעלות אחת לשניה מחייבת 10% העברה ליוצר" — הדרישה עומדת במסגרת המרקטפלייס המקומי. מבחינת דרישת התכנון הפנימית של הפרויקט ל-ERC2981 — יש פער שצריך לציין ביושר.</p>
+
+<h2>4. הוראות דמו מקומי</h2>
+
+<p>להרצה נקייה במחשב מקומי:</p>
+
+<pre><code>
+npm install
+npm install --prefix frontend
+npm install --prefix backend
+npx hardhat node
+</code></pre>
+
+<p>בטרמינל נוסף:</p>
+
+<pre><code>
+npm run deploy:local
+npm run seed:local
+npm run backend
+npm run frontend
+</code></pre>
+
+<p>הערות:</p>
+
+<ul>
+<li><code>npx hardhat node</code> חייב להישאר פתוח.</li>
+<li><code>npm run deploy:local</code> יוצר <code>frontend/src/config/contracts.json</code> עם כתובות החוזים המקומיות.</li>
+<li><code>npm run seed:local</code> יוצר נתוני דמו, כולל NFT/listing ו-CIDs דמיוניים.</li>
+</ul>
+
+<h2>5. הגדרת MetaMask</h2>
+
+<p>יש להוסיף רשת ידנית:</p>
+
+<ul>
+<li>Network name: <code>Hardhat Localhost</code></li>
+<li>RPC URL: <code>http://127.0.0.1:8545</code></li>
+<li>Chain ID: <code>31337</code></li>
+<li>Currency: <code>ETH</code></li>
+</ul>
+
+<p>אזהרה: חשבונות Hardhat הם חשבונות ציבוריים ומוכרים. מותר להשתמש בהם רק ברשת המקומית. <strong>אסור להשתמש במפתחות האלה ב-mainnet, Sepolia אמיתי עם כסף, או כל רשת ציבורית עם נכסים אמיתיים.</strong></p>
+
+<h2>6. תפקידי חשבונות דמו</h2>
+
+<p>כאשר מריצים <code>npx hardhat node</code>, Hardhat מציג רשימת חשבונות בדיקה. לפי הסקריפטים והבדיקות בפרויקט:</p>
+
+<ul>
+<li><strong>deployer / contract owner</strong>: החשבון הראשון, index 0. פורש חוזים ומחזיק בעלות על <code>PrintToken</code>.</li>
+<li><strong>creator / seller</strong>: החשבון השני, index 1. מקבל PRINT בדמו, מטביע NFT ומוכר אותו.</li>
+<li><strong>buyer</strong>: החשבון השלישי, index 2. קונה את ה-NFT במכירה הראשונה.</li>
+<li><strong>resale buyer</strong>: החשבון הרביעי, index 3. משמש להדגמת resale ותמלוג 10% ליוצר.</li>
+</ul>
+
+<p>כתובות Hardhat נפוצות בדמו מקומי:</p>
+
+<table>
+<tr><th>תפקיד</th><th>כתובת מקומית נפוצה</th></tr>
+<tr><td>deployer / owner</td><td><code>0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266</code></td></tr>
+<tr><td>creator / seller</td><td><code>0x70997970c51812dc3a010c7d01b50e0d17dc79c8</code></td></tr>
+<tr><td>buyer</td><td><code>0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc</code></td></tr>
+<tr><td>resale buyer</td><td><code>0x90f79bf6eb2c4f870365e785982e1f101e93b906</code></td></tr>
+</table>
+
+<p>אם Hardhat מציג כתובות אחרות, יש להשתמש בכתובות שמופיעות בטרמינל שלכם.</p>
+
+<h2>7. איך להדגים בפועל</h2>
+
+<p>1. להריץ <code>npx hardhat node</code>.</p>
+<p>2. להריץ <code>npm run deploy:local</code>.</p>
+<p>3. להריץ <code>npm run seed:local</code> כדי ליצור listing ראשוני.</p>
+<p>4. להריץ <code>npm run backend</code>.</p>
+<p>5. להריץ <code>npm run frontend</code>.</p>
+<p>6. לפתוח את כתובת Vite בדפדפן.</p>
+<p>7. לחבר MetaMask לרשת <code>localhost:8545</code>, Chain ID <code>31337</code>.</p>
+<p>8. לצפות ב-marketplace listing.</p>
+<p>9. לפתוח פרטי NFT ולראות title, description, file CID, metadata CID, creator, owner, timestamp והיסטוריה.</p>
+<p>10. להטביע NFT חדש בטופס Mint. במצב ברירת מחדל ייווצרו CIDs מסוג <code>mock-*</code>.</p>
+<p>11. לראות שה-NFT מופיע ב-My Owned Licenses.</p>
+<p>12. לבצע list NFT במחיר ETH מקומי.</p>
+<p>13. לבצע cancel listing ולהראות שה-listing יורד.</p>
+<p>14. לבצע list מחדש.</p>
+<p>15. לעבור לחשבון buyer ב-MetaMask ולקנות NFT.</p>
+<p>16. לראות שה-owner השתנה ושהיסטוריית SALE נוספה.</p>
+<p>17. לעבור לחשבון buyer, לפרסם resale, ואז לקנות מחשבון resale buyer.</p>
+<p>18. לאמת שהיוצר המקורי קיבל 10% והמוכר 90% באמצעות יתרות או test.</p>
+<p>19. לראות My Owned Licenses ו-Created &amp; Sold Licenses.</p>
+<p>20. לבדוק x402 ללא תשלום:</p>
+
+<pre><code>
+curl -i http://127.0.0.1:4000/api/paid-preview/1
+</code></pre>
+
+<p>צריך לקבל HTTP 402.</p>
+
+<p>21. לבדוק x402 עם proof דמו:</p>
+
+<pre><code>
+curl -i -H "x-printchain-demo-payment: paid" http://127.0.0.1:4000/api/paid-preview/1
+</code></pre>
+
+<p>צריך לקבל HTTP 200 ו-JSON עם protected preview דמו.</p>
+
+<h2>8. אמיתי מול מוק/דמו</h2>
+
+<h3>אמיתי ברשת מקומית</h3>
+
+<ul>
+<li>חוזי Solidity נפרסים ל-Hardhat local blockchain.</li>
+<li>ERC20 PRINT אמיתי ברשת המקומית.</li>
+<li>ERC721 license NFT אמיתי ברשת המקומית.</li>
+<li>Marketplace אמיתי שמבצע קנייה ב-ETH מקומי.</li>
+<li>העברת בעלות NFT דרך marketplace.</li>
+<li>חלוקת ETH פנימית: 10% ליוצר המקורי ו-90% למוכר.</li>
+<li>שמירת timestamps והיסטוריית בעלות בחוזה.</li>
+<li>frontend ו-backend הם אפליקציות מקומיות אמיתיות.</li>
+</ul>
+
+<h3>מוק/דמו</h3>
+
+<ul>
+<li>העלאת IPFS במצב ברירת מחדל היא מוק: נוצרים CIDs מסוג <code>mock-*</code> ולא מתבצעת העלאה אמיתית ל-IPFS.</li>
+<li>סקריפט seed משתמש ב-CIDs דמיוניים לצורך הדגמה.</li>
+<li>x402 הוא מוק מקומי: header או query משמשים כהוכחת תשלום דמו, ללא סליקה אמיתית.</li>
+<li>אין מפתחות Pinata, אין private keys, אין payment credentials ואין הגדרת mainnet/Sepolia.</li>
+</ul>
+
+<h2>9. מסקנה סופית</h2>
+
+<p>הפרויקט <strong>עומד ברוב דרישות קורס ה-DApp</strong> כפי שנוסחו בעברית:</p>
+
+<ul>
+<li>יש DApp עם חוזים וממשק.</li>
+<li>יש ERC20.</li>
+<li>יש NFT.</li>
+<li>יש היסטוריית בעלות על-chain.</li>
+<li>יש מכירה דרך marketplace עם 10% תמלוג ליוצר המקורי.</li>
+<li>יש timestamps והיסטוריה מצטברת.</li>
+<li>יש רישום CIDs של קובץ ומטא־דאטה.</li>
+<li>יש חיבור MetaMask.</li>
+<li>יש ממשק אינטרנטי.</li>
+<li>יש שימוש ב-<code>web3.js</code> ב-frontend.</li>
+<li>יש דמו x402/HTTP 402.</li>
+</ul>
+
+<p>יש לציין ביושר שני פערים/הסתייגויות:</p>
+
+<p>1. <strong>IPFS</strong> — במצב המקומי ברירת המחדל היא דמו/מוק, לא העלאה אמיתית. החוזה והממשק תומכים בשמירת CID, אבל כדי לבצע העלאה אמיתית צריך לחבר endpoint מתאים בלי להכניס סודות לריפו.</p>
+<p>2. <strong>ERC2981</strong> — התמלוג של 10% נאכף בפועל במרקטפלייס, אך החוזה הנוכחי אינו חושף <code>royaltyInfo</code> תקני של ERC2981.</p>
+
+<p>לכן, עבור דרישות הקורס בעברית, הפרויקט מתאים להצגה כ-DApp מלא מקומי עם רכיבי דמו מסומנים בבירור. עבור דרישות פרויקט פנימיות רחבות יותר, מומלץ בעתיד להוסיף תמיכת ERC2981 תקנית ופונקציית price history נפרדת אם המרצה דורש זאת במפורש.</p>
+
+</body>
+</html>
