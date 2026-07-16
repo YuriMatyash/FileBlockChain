@@ -7,6 +7,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @title PrintToken
 /// @notice ERC20 reward token for PrintChain participation rewards.
 /// @dev PRINT is a reward/loyalty token; marketplace purchases are intended to use ETH in later phases.
+// creates the ERC20 token of the project. 
+// name: PrintToken, symbol: PRINT, type: ERC20, role: reward token for PrintChain participation rewards, owner: deployer of the contract
+// PRINT is not used to buy NFTs in the marketplace, but is a reward/loyalty token for participants of PrintChain.
 contract PrintToken is ERC20, Ownable {
     constructor(uint256 initialSupply) ERC20("PrintToken", "PRINT") Ownable(msg.sender) {
         _mint(msg.sender, initialSupply);
