@@ -23,7 +23,7 @@ A PrintChain NFT is a manufacturing/use **license NFT**. It is not described as 
 
 > Each NFT represents a license to use, print, or manufacture the digital model/file.
 
-The NFT stores and exposes important license data such as creator/designer, title, short description, file CID, metadata CID/token URI, mint timestamp, initial price, and ownership history. The full manufacturing file is not stored on-chain.
+The NFT stores and exposes important license data such as creator/designer, title, short description, file CID, metadata CID/token URI, mint timestamp, and ownership history. The full manufacturing file is not stored on-chain. The actual ETH sale price is chosen only when an owner creates a marketplace listing.
 
 ### PRINT ERC20 reward token
 
