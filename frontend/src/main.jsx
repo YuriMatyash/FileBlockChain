@@ -33,6 +33,14 @@ function formatTimestamp(value) {
   return new Date(seconds * 1000).toLocaleString();
 }
 
+function formatPrintBalance(value) {
+  const normalized = String(value || "0");
+  const [whole, fraction] = normalized.split(".");
+  if (!fraction) return whole;
+  const trimmedFraction = fraction.replace(/0+$/, "").slice(0, 4);
+  return trimmedFraction ? `${whole}.${trimmedFraction}` : whole;
+}
+
 const METADATA_FALLBACK_NOTE = "Not available in metadata yet; showing on-chain fallback where possible.";
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:4000";
 
@@ -204,7 +212,7 @@ function App() {
       setTokenInfo({ name, symbol, balance: web3.utils.fromWei(balance, "ether") });
     }
     setStatus("Data loaded.");
-  }, [account, contracts, loadLicense, web3]);
+  }, [account, chainId, contracts, loadLicense, web3]);
 
   useEffect(() => { refreshData(); }, [refreshData]);
 
@@ -304,7 +312,7 @@ function App() {
   const buyLicense = async (license) => {
     setStatus(`Buying license #${license.tokenId} with ETH...`);
     await contracts.PrintMarketplace.methods.buyLicense(license.tokenId).send({ from: account, value: license.listing.price });
-    setStatus("Purchase complete. Marketplace enforced the creator royalty and transferred the license NFT. Marketplace, owned licenses, and details are refreshing now.");
+    setStatus("Purchase complete. The license was paid for in ETH; the marketplace enforced the creator royalty and minted your 1 PRINT buyer reward. Marketplace, balance, owned licenses, and details are refreshing now.");
     const refreshed = await loadLicense(license.tokenId);
     if (refreshed) setSelected(refreshed);
     await refreshData();
@@ -325,7 +333,7 @@ function App() {
       </section>
 
       <section className="grid two compact-grid">
-        <article><h2>Wallet status</h2><p><strong>Account:</strong> {account || "Not connected"}</p><p><strong>Chain ID:</strong> {chainId || "—"}</p><p><strong>Expected local chain:</strong> {EXPECTED_CHAIN_ID}</p></article>
+        <article><h2>Wallet status</h2><p><strong>Account:</strong> {account || "Not connected"}</p><p><strong>Chain ID:</strong> {chainId || "—"}</p><p><strong>Expected local chain:</strong> {EXPECTED_CHAIN_ID}</p><p><strong>Connected wallet PRINT balance:</strong> {tokenInfo ? `${formatPrintBalance(tokenInfo.balance)} ${tokenInfo.symbol}` : "Connect wallet to load"}</p></article>
         <article className="debug-panel"><details><summary>Local contract addresses/debug info</summary>{addresses.length ? addresses.map(([name, data]) => <p key={name}><strong>{name}:</strong> <code>{data.address}</code></p>) : <p>No contract config loaded.</p>}</details></article>
       </section>
 
@@ -333,7 +341,7 @@ function App() {
 
       <section className="grid two">
         <MintForm form={mintForm} setForm={setMintForm} onSubmit={mintLicense} disabled={!account || wrongNetwork || !contracts.PrintLicenseNFT} uploadStatus={uploadStatus} lastMetadata={lastMetadata} />
-        <article className="token-panel"><details open><summary>PRINT reward/token info</summary>{tokenInfo ? <div className="token-mini"><p><strong>Name:</strong> {tokenInfo.name}</p><p><strong>Symbol:</strong> {tokenInfo.symbol}</p><p><strong>Your balance:</strong> {tokenInfo.balance} {tokenInfo.symbol}</p></div> : <p>Connect wallet to load PRINT reward token data.</p>}<p className="note">PRINT proves the ERC20 reward-token requirement. Local marketplace purchases still use ETH through PrintMarketplace.</p></details></article>
+        <article className="token-panel"><details open><summary>PRINT reward/token info</summary>{tokenInfo ? <div className="token-mini"><p><strong>Name:</strong> {tokenInfo.name}</p><p><strong>Symbol:</strong> {tokenInfo.symbol}</p><p><strong>Your balance:</strong> {formatPrintBalance(tokenInfo.balance)} {tokenInfo.symbol}</p></div> : <p>Connect wallet to load PRINT reward token data.</p>}<p className="note">Buyers receive 1 PRINT reward after each successful NFT purchase. PRINT is a reward token; local marketplace purchases still use ETH through PrintMarketplace.</p></details></article>
       </section>
 
       <section className="panel"><h2>My Owned Licenses ({myLicenses.length})</h2><p className="note">My Owned Licenses shows license NFTs currently owned by the connected wallet. Current owners can list, cancel active listings, sell through the marketplace, and view details/history from here.</p><div className="card-grid">{myLicenses.length ? myLicenses.map((license) => <OwnedLicenseCard key={license.tokenId} license={license} web3={web3} listPrice={listPrices[license.tokenId] || ""} onPriceChange={(value) => setListPrices({ ...listPrices, [license.tokenId]: value })} onList={listLicense} onCancel={cancelListing} onSelect={setSelected} />) : <p>No licenses currently owned by the connected wallet were found. Mint a license, buy one from the marketplace, or switch MetaMask to the account that owns the NFT.</p>}</div></section>

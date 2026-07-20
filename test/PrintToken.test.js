@@ -4,6 +4,7 @@ const { ContractFactory, BrowserProvider, id, parseEther, ZeroAddress } = requir
 
 const ERC20_INVALID_RECEIVER_SELECTOR = id("ERC20InvalidReceiver(address)").slice(0, 10);
 const OWNABLE_UNAUTHORIZED_ACCOUNT_SELECTOR = id("OwnableUnauthorizedAccount(address)").slice(0, 10);
+const UNAUTHORIZED_REWARD_MINTER_SELECTOR = id("UnauthorizedRewardMinter(address)").slice(0, 10);
 
 async function deployPrintToken(initialSupply) {
   const provider = new BrowserProvider(hre.network.provider);
@@ -109,13 +110,37 @@ describe("PrintToken", function () {
     assert.equal(await token.totalSupply(), initialSupply + rewardAmount);
   });
 
-  it("prevents non-owners from minting reward tokens", async function () {
+  it("allows the owner to set a marketplace reward minter", async function () {
+    const rewardMinterAddress = await nonOwner.getAddress();
+
+    await token.setRewardMinter(rewardMinterAddress);
+
+    assert.equal(await token.rewardMinter(), rewardMinterAddress);
+  });
+
+  it("prevents non-owners from setting the reward minter", async function () {
+    await assertRevertsWithSelector(
+      token.connect(nonOwner).setRewardMinter(await nonOwner.getAddress()),
+      OWNABLE_UNAUTHORIZED_ACCOUNT_SELECTOR
+    );
+  });
+
+  it("allows the configured reward minter to mint reward tokens", async function () {
+    const rewardAmount = parseEther("1");
+    await token.setRewardMinter(await nonOwner.getAddress());
+
+    await token.connect(nonOwner).mintReward(await recipient.getAddress(), rewardAmount);
+
+    assert.equal(await token.balanceOf(await recipient.getAddress()), rewardAmount);
+  });
+
+  it("prevents random users from minting reward tokens", async function () {
     const recipientAddress = await recipient.getAddress();
     const rewardAmount = parseEther("100");
 
     await assertRevertsWithSelector(
       token.connect(nonOwner).mintReward(recipientAddress, rewardAmount),
-      OWNABLE_UNAUTHORIZED_ACCOUNT_SELECTOR
+      UNAUTHORIZED_REWARD_MINTER_SELECTOR
     );
 
     assert.equal(await token.balanceOf(recipientAddress), 0n);

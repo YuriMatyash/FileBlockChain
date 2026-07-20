@@ -17,11 +17,13 @@ async function deployFixture() {
   const buyer = await provider.getSigner(2);
   const secondBuyer = await provider.getSigner(3);
 
+  const printToken = await deployContract("PrintToken", deployer, [parseEther("1000000")]);
   const nft = await deployContract("PrintLicenseNFT", deployer);
-  const marketplace = await deployContract("PrintMarketplace", deployer, [await nft.getAddress()]);
+  const marketplace = await deployContract("PrintMarketplace", deployer, [await nft.getAddress(), await printToken.getAddress()]);
   await (await nft.connect(deployer).setTransferController(await marketplace.getAddress())).wait();
+  await (await printToken.connect(deployer).setRewardMinter(await marketplace.getAddress())).wait();
 
-  return { provider, deployer, creator, buyer, secondBuyer, nft, marketplace };
+  return { provider, deployer, creator, buyer, secondBuyer, nft, printToken, marketplace };
 }
 
 async function mintExampleLicense(nft, creator) {
@@ -66,11 +68,12 @@ describe("PrintMarketplace", function () {
   let buyer;
   let secondBuyer;
   let nft;
+  let printToken;
   let marketplace;
   let tokenId;
 
   beforeEach(async function () {
-    ({ provider, creator, buyer, secondBuyer, nft, marketplace } = await deployFixture());
+    ({ provider, creator, buyer, secondBuyer, nft, printToken, marketplace } = await deployFixture());
     tokenId = await mintExampleLicense(nft, creator);
   });
 
@@ -142,6 +145,29 @@ describe("PrintMarketplace", function () {
     assert.equal(await nft.ownerOf(tokenId), await buyer.getAddress());
   });
 
+  it("mints exactly 1 PRINT to the buyer after a successful purchase", async function () {
+    const price = parseEther("1");
+    await (await marketplace.connect(creator).listLicense(tokenId, price)).wait();
+
+    await (await marketplace.connect(buyer).buyLicense(tokenId, { value: price })).wait();
+
+    assert.equal(await printToken.balanceOf(await buyer.getAddress()), parseEther("1"));
+  });
+
+  it("mints 1 PRINT for every successful purchase, including a resale", async function () {
+    const firstSalePrice = parseEther("1");
+    await (await marketplace.connect(creator).listLicense(tokenId, firstSalePrice)).wait();
+    await (await marketplace.connect(buyer).buyLicense(tokenId, { value: firstSalePrice })).wait();
+
+    const resalePrice = parseEther("2");
+    await (await marketplace.connect(buyer).listLicense(tokenId, resalePrice)).wait();
+    await (await marketplace.connect(secondBuyer).buyLicense(tokenId, { value: resalePrice })).wait();
+
+    assert.equal(await printToken.balanceOf(await buyer.getAddress()), parseEther("1"));
+    assert.equal(await printToken.balanceOf(await secondBuyer.getAddress()), parseEther("1"));
+    assert.equal(await printToken.totalSupply(), parseEther("1000002"));
+  });
+
   it("pays the original creator 10% royalty and the seller 90% on resale", async function () {
     const firstSalePrice = parseEther("1");
     await (await marketplace.connect(creator).listLicense(tokenId, firstSalePrice)).wait();
@@ -197,6 +223,7 @@ describe("PrintMarketplace", function () {
       marketplace.connect(buyer).buyLicense(tokenId, { value: parseEther("0.5") }),
       marketplace.interface.getError("IncorrectEthAmount").selector
     );
+    assert.equal(await printToken.balanceOf(await buyer.getAddress()), 0n);
   });
 
   it("rejects buying your own listing", async function () {

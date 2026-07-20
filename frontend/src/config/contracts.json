@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-16T17:45:14.036Z",
+  "generatedAt": "2026-07-20T07:23:44.291Z",
   "network": {
     "name": "localhost",
     "chainId": "31337",
@@ -130,6 +130,17 @@
           "type": "error"
         },
         {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "caller",
+              "type": "address"
+            }
+          ],
+          "name": "UnauthorizedRewardMinter",
+          "type": "error"
+        },
+        {
           "anonymous": false,
           "inputs": [
             {
@@ -171,6 +182,25 @@
             }
           ],
           "name": "OwnershipTransferred",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "previousRewardMinter",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "newRewardMinter",
+              "type": "address"
+            }
+          ],
+          "name": "RewardMinterUpdated",
           "type": "event"
         },
         {
@@ -325,6 +355,32 @@
         {
           "inputs": [],
           "name": "renounceOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "rewardMinter",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "newRewardMinter",
+              "type": "address"
+            }
+          ],
+          "name": "setRewardMinter",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
@@ -1312,6 +1368,11 @@
               "internalType": "address",
               "name": "licenseNFTAddress",
               "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "printTokenAddress",
+              "type": "address"
             }
           ],
           "stateMutability": "nonpayable",
@@ -1429,6 +1490,31 @@
           "inputs": [
             {
               "indexed": true,
+              "internalType": "address",
+              "name": "buyer",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "BuyerRewardMinted",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
               "internalType": "uint256",
               "name": "tokenId",
               "type": "uint256"
@@ -1531,6 +1617,19 @@
               "internalType": "uint96",
               "name": "",
               "type": "uint96"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "BUYER_REWARD_AMOUNT",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
             }
           ],
           "stateMutability": "view",
@@ -1690,6 +1789,19 @@
           "name": "listLicense",
           "outputs": [],
           "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "printToken",
+          "outputs": [
+            {
+              "internalType": "contract IPrintToken",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
           "type": "function"
         }
       ]
