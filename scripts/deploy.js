@@ -51,13 +51,17 @@ async function main() {
   const printLicenseNFTAddress = await printLicenseNFT.getAddress();
   console.log(`PrintLicenseNFT deployed: ${printLicenseNFTAddress}`);
 
-  const { contract: printMarketplace, artifact: printMarketplaceArtifact } = await deployContract("PrintMarketplace", deployer, [printLicenseNFTAddress]);
+  const { contract: printMarketplace, artifact: printMarketplaceArtifact } = await deployContract("PrintMarketplace", deployer, [printLicenseNFTAddress, printTokenAddress]);
   const printMarketplaceAddress = await printMarketplace.getAddress();
   console.log(`PrintMarketplace deployed: ${printMarketplaceAddress}`);
 
   const controllerTx = await printLicenseNFT.setTransferController(printMarketplaceAddress);
   await controllerTx.wait();
   console.log(`PrintLicenseNFT transfer controller set to marketplace: ${printMarketplaceAddress}`);
+
+  const rewardMinterTx = await printToken.setRewardMinter(printMarketplaceAddress);
+  await rewardMinterTx.wait();
+  console.log(`PrintToken reward minter set to marketplace: ${printMarketplaceAddress}`);
 
   const config = writeFrontendConfig({
     chainId: network.chainId,

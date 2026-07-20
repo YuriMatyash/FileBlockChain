@@ -35,6 +35,12 @@ async function main() {
   console.log(`Deployer/reward owner: ${deployerAddress}`);
   console.log(`Demo creator: ${creatorAddress}`);
 
+  const rewardMinter = await printToken.rewardMinter();
+  if (rewardMinter.toLowerCase() !== config.contracts.PrintMarketplace.address.toLowerCase()) {
+    throw new Error("PrintMarketplace is not configured as the PRINT reward minter. Redeploy locally before seeding.");
+  }
+  console.log(`PRINT buyer rewards are enabled through marketplace minter: ${rewardMinter}`);
+
   const rewardAmount = parseEther("100");
   await (await printToken.mintReward(creatorAddress, rewardAmount)).wait();
   console.log(`Minted demo reward tokens: ${formatEther(rewardAmount)} PRINT to ${creatorAddress}`);
@@ -67,7 +73,7 @@ async function main() {
   const salePrice = parseEther("1");
   await (await printMarketplace.listLicense(tokenId, salePrice)).wait();
   console.log(`Listed tokenId ${tokenId} for ${formatEther(salePrice)} ETH through PrintMarketplace`);
-  console.log("Seed complete. Demo data uses fake/mock IPFS CIDs. The final project includes the frontend and mock x402 backend demo.");
+  console.log("Seed complete. Demo data uses fake/mock IPFS CIDs. Buyers receive 1 PRINT after each successful ETH marketplace purchase.");
 }
 
 main().catch((error) => {

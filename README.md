@@ -27,7 +27,7 @@ The NFT stores and exposes important license data such as creator/designer, titl
 
 ### PRINT ERC20 reward token
 
-`PrintToken` is an ERC20 token named `PrintToken` with symbol `PRINT`. It is mainly a reward/loyalty token for showing ERC20 functionality and rewarding participation. Marketplace purchases use ETH on the local Hardhat chain, not PRINT.
+`PrintToken` is an ERC20 token named `PrintToken` with symbol `PRINT`. It is mainly a reward/loyalty token for showing ERC20 functionality and rewarding participation. Marketplace purchases use ETH on the local Hardhat chain, not PRINT. After every successful marketplace purchase, the buyer receives exactly `1 PRINT`; the deployed marketplace is explicitly authorized as the token's reward minter, while the token owner retains manual reward minting.
 
 ### ETH marketplace sales and creator royalty
 

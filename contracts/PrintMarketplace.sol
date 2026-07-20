@@ -39,6 +39,11 @@ interface IPrintLicenseNFT {
     function controlledTransferFrom(address from, address to, uint256 tokenId, uint256 price, string calldata actionType) external;
 }
 
+/// @dev Minimal PRINT reward token interface. ETH remains the marketplace purchase currency.
+interface IPrintToken {
+    function mintReward(address to, uint256 amount) external;
+}
+
 /// @title PrintMarketplace
 /// @notice ETH marketplace for PrintChain manufacturing/use license NFTs.
 /// @dev PRINT is not used as purchase currency. This marketplace enforces a 10% creator royalty on each sale.
@@ -57,8 +62,11 @@ contract PrintMarketplace is ReentrancyGuard {
     // 1,000 basis points = 10%.
     uint96 public constant ROYALTY_BASIS_POINTS = 1_000;
     uint96 public constant BASIS_POINTS = 10_000;
+    // One whole PRINT token in the ERC20's 18-decimal units. This is a buyer reward, not payment.
+    uint256 public constant BUYER_REWARD_AMOUNT = 1 ether;
 
     IPrintLicenseNFT public immutable licenseNFT;
+    IPrintToken public immutable printToken;
 
     // listing storage:
     // tokenId => listing data.
@@ -82,6 +90,8 @@ contract PrintMarketplace is ReentrancyGuard {
         uint256 royaltyAmount,
         uint256 timestamp
     );
+    // Emitted only after a successful ETH marketplace purchase mints its buyer reward.
+    event BuyerRewardMinted(address indexed buyer, uint256 indexed tokenId, uint256 amount);
 
     // Custom errors define precise failure reasons
     error NotLicenseOwner(uint256 tokenId, address caller);
@@ -95,8 +105,9 @@ contract PrintMarketplace is ReentrancyGuard {
 
     // Stores the NFT contract address so this marketplace can check ownership,
     // read creator information, and transfer NFTs through the controlled flow.
-    constructor(address licenseNFTAddress) {
+    constructor(address licenseNFTAddress, address printTokenAddress) {
         licenseNFT = IPrintLicenseNFT(licenseNFTAddress);
+        printToken = IPrintToken(printTokenAddress);
     }
 
     /// @notice List a license NFT for sale in ETH.
@@ -174,7 +185,11 @@ contract PrintMarketplace is ReentrancyGuard {
         _sendEth(info.creator, royaltyAmount);
         _sendEth(listing.seller, sellerAmount);
 
+        // Purchases are paid in ETH. PRINT is minted separately as a 1 PRINT buyer loyalty reward.
+        printToken.mintReward(msg.sender, BUYER_REWARD_AMOUNT);
+
         emit LicenseSold(tokenId, listing.seller, msg.sender, listing.price, royaltyAmount, block.timestamp);
+        emit BuyerRewardMinted(msg.sender, tokenId, BUYER_REWARD_AMOUNT);
     }
 
     // Returns the listing data for a specific tokenId.
