@@ -45,10 +45,10 @@ Only import local Hardhat test keys. Never use these accounts for real funds.
 
 1. Switch MetaMask to the creator account.
 2. Open the upload/mint section.
-3. Choose or enter a sample manufacturing file reference such as STL, STEP, 3MF, CNC, ZIP, PDF, or a technical drawing.
+3. Choose a sample manufacturing file such as an STL, STEP, 3MF, CNC file, ZIP, PDF, or technical drawing.
 4. Optionally provide a preview image/render.
-5. Enter title, summary, category, file type, documentation, compatibility, and suggested initial ETH price.
-6. Submit the form.
+5. Enter title, summary, category, file type, documentation, and compatibility.
+6. Submit the form. The local mock/demo upload adapter automatically creates CID-like values when a backend IPFS upload endpoint is not configured.
 7. Explain that default upload mode is mock/demo: the app creates CID-like values locally and stores lightweight metadata in browser session storage.
 8. Confirm the mint transaction in MetaMask.
 9. Show that the license stores file CID, metadata CID/token URI, creator, mint timestamp, and initial history entry.
@@ -57,7 +57,7 @@ Only import local Hardhat test keys. Never use these accounts for real funds.
 
 1. Stay on the owner/creator account.
 2. Open **My Owned Licenses**.
-3. Enter an ETH price and list the license.
+3. Enter the actual ETH sale price and list the license.
 4. Show the active marketplace listing.
 5. Optionally cancel the listing to demonstrate delisting.
 6. Re-list the license before continuing to the purchase demo.
