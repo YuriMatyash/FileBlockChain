@@ -54,6 +54,7 @@ function attributeValue(metadata, trait) {
 }
 
 function App() {
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("printchain-theme") === "dark");
   const [web3, setWeb3] = useState(null);
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
@@ -72,6 +73,10 @@ function App() {
   const [listPrices, setListPrices] = useState({});
 
   const wrongNetwork = chainId && Number(chainId) !== EXPECTED_CHAIN_ID;
+
+  useEffect(() => {
+    localStorage.setItem("printchain-theme", isDarkMode ? "dark" : "light");
+  }, [isDarkMode]);
 
   useEffect(() => {
     fetch("/src/config/contracts.json", { cache: "no-store" })
@@ -309,8 +314,18 @@ function App() {
   const addresses = useMemo(() => Object.entries(config?.contracts || {}), [config]);
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${isDarkMode ? " dark-mode" : ""}`}>
       <section className="hero panel">
+        <div className="hero-actions">
+          <button
+            className="secondary theme-toggle"
+            type="button"
+            aria-pressed={isDarkMode}
+            onClick={() => setIsDarkMode((enabled) => !enabled)}
+          >
+            {isDarkMode ? "☀️ Light mode" : "🌙 Dark mode"}
+          </button>
+        </div>
         <p className="eyebrow">PrintChain final local demo</p>
         <h1>Manufacturing/use license NFT marketplace</h1>
         <p>Each NFT represents a license to use, print, or manufacture the digital model/file. Purchases use ETH through PrintMarketplace; PRINT is a reward token.</p>
