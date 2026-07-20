@@ -54,15 +54,18 @@ If a future backend upload proxy is configured through `VITE_IPFS_UPLOAD_ENDPOIN
 
 Creators can enter metadata fields and optionally select a preview image/render. Metadata follows an ERC721-compatible shape with fields such as `name`, `description`, `image`, `external_url`, `fileCid`, `documentation`, and attributes for file type, category, license type, and software/tool compatibility. Automatic STL/3D preview generation is not implemented.
 
-### x402 / HTTP 402 mock demo
+### x402 / HTTP 402 local demos
 
-The backend provides:
+PrintChain has two deliberately local, x402-style HTTP `402 Payment Required` demonstrations:
+
+1. **Marketplace access gate.** After a wallet connects, the frontend calls `GET /api/marketplace-access/:walletAddress`. Until the wallet unlocks, the backend returns `402` with the Hardhat deployer/local receiver and a required amount of `1 ETH`. The user sends `1 ETH` with MetaMask, then the frontend submits the hash to `POST /api/marketplace-access/verify`. The backend checks the mined transaction on local Hardhat RPC: sender, receiver, successful receipt, and at least `1 ETH` value. Verified wallets are held **only in backend memory**, so access resets when the backend restarts.
+2. **Paid preview route.** The existing protected-preview mock remains available:
 
 ```text
 GET /api/paid-preview/:tokenId
 ```
 
-This is a local x402-style mock/demo only. Unpaid requests return HTTP `402 Payment Required`. Requests with demo proof return protected demo JSON. There is no real x402 settlement, facilitator, payment credential, paid download, or real file delivery.
+The marketplace gate is a local demo: it gates the frontend/API experience, not the fundamentally public smart-contract data. It is not a replacement for purchasing an NFT. NFT purchases still use ETH through `PrintMarketplace`; the marketplace keeps its normal 10% creator / 90% seller split, records history, transfers the NFT, and rewards the buyer with 1 PRINT. The preview route remains a mock proof flow with no real settlement, facilitator, credentials, paid download, or real file delivery.
 
 Accepted mock proofs:
 
@@ -179,6 +182,16 @@ Mock-paid request, expected HTTP `200` and protected demo JSON:
 curl -i -H "x-printchain-demo-payment: paid" http://127.0.0.1:4000/api/paid-preview/1
 ```
 
+### Marketplace access-gate checks
+
+With the local node, deployment, seed, and backend running, check an account before it is unlocked (expect `402`):
+
+```bash
+curl -i http://127.0.0.1:4000/api/marketplace-access/0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+```
+
+In the frontend, connect that same local Hardhat account and click **Pay 1 ETH and Unlock Marketplace**. MetaMask sends exactly `1 ETH` to the local deployer/default receiver; the backend verifies the transaction hash. Re-run the GET request (expect `200`). A different wallet receives `402` until it pays separately. Invalid hashes return `400`; a real local transfer below `1 ETH` returns `402` during verification. Restarting the backend clears the in-memory unlock list.
+
 ## What is real vs mocked
 
 | Area | Status |
@@ -192,7 +205,7 @@ curl -i -H "x-printchain-demo-payment: paid" http://127.0.0.1:4000/api/paid-prev
 | File storage | Mock/demo by default; full files are not stored on-chain |
 | IPFS CIDs | Mock/demo CIDs by default unless a future backend proxy is configured |
 | Preview images | Manually provided or mock/session metadata; no automatic 3D preview generation |
-| x402 | Mock/demo HTTP 402 route only; no real settlement |
+| x402 | Local frontend/API marketplace access gate verifies a local 1 ETH transfer and a separate mock-paid preview route; no production settlement |
 | Sepolia/mainnet | Not configured and intentionally not documented for this submission |
 
 ## School requirement mapping
@@ -210,7 +223,7 @@ curl -i -H "x-printchain-demo-payment: paid" http://127.0.0.1:4000/api/paid-prev
 | MetaMask | Frontend connects to MetaMask and uses the connected wallet for transactions. |
 | web3.js | Frontend imports and uses `web3` for contract interaction. |
 | Complex smart contract | NFT + marketplace include license metadata, controlled transfers, royalties, listing lifecycle, and history. |
-| x402 / HTTP 402 demo | Backend route returns `402` without mock proof and protected JSON with mock proof. |
+| x402 / HTTP 402 demo | Marketplace gate returns `402` until a local 1 ETH transfer is verified; paid preview returns `402` without mock proof and protected JSON with mock proof. |
 
 ## More documentation
 
