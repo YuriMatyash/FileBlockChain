@@ -71,6 +71,7 @@ function App() {
   const [uploadStatus, setUploadStatus] = useState("Mock/demo IPFS mode is active by default unless a backend upload endpoint is configured.");
   const [lastMetadata, setLastMetadata] = useState(null);
   const [listPrices, setListPrices] = useState({});
+  const [marketplaceAccess, setMarketplaceAccess] = useState({ state: "idle", details: null, error: "" });
 
   const wrongNetwork = chainId && Number(chainId) !== EXPECTED_CHAIN_ID;
 
@@ -89,6 +90,27 @@ function App() {
         setConfigError("Missing frontend/src/config/contracts.json. Start a local Hardhat node, then run npm run deploy:local.");
       });
   }, []);
+
+  const checkMarketplaceAccess = useCallback(async (walletAddress = account) => {
+    if (!walletAddress) {
+      setMarketplaceAccess({ state: "idle", details: null, error: "" });
+      return;
+    }
+    setMarketplaceAccess((current) => ({ ...current, state: "checking", error: "" }));
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/marketplace-access/${walletAddress}`);
+      const details = await response.json().catch(() => ({}));
+      if (response.ok && details.accessGranted) {
+        setMarketplaceAccess({ state: "granted", details, error: "" });
+      } else if (response.status === 402) {
+        setMarketplaceAccess({ state: "locked", details, error: "" });
+      } else {
+        setMarketplaceAccess({ state: "error", details, error: details.message || "Marketplace access check failed." });
+      }
+    } catch (error) {
+      setMarketplaceAccess({ state: "error", details: null, error: `Could not reach the x402 backend: ${error.message}` });
+    }
+  }, [account]);
 
   useEffect(() => {
     if (!config || !web3) return;
@@ -111,6 +133,7 @@ function App() {
     setAccount(accounts[0] || "");
     setChainId(networkId.toString());
     setStatus("Wallet connected. Marketplace purchases use ETH; PRINT is shown as a reward token.");
+    await checkMarketplaceAccess(accounts[0] || "");
   };
 
   useEffect(() => {
@@ -124,6 +147,10 @@ function App() {
       window.ethereum.removeListener("chainChanged", onChain);
     };
   }, []);
+
+  useEffect(() => {
+    if (account) checkMarketplaceAccess(account);
+  }, [account, chainId, checkMarketplaceAccess]);
 
   const loadLicense = useCallback(async (tokenId, listing = null) => {
     const nft = contracts.PrintLicenseNFT;
@@ -311,6 +338,34 @@ function App() {
     await refreshData();
   };
 
+  const unlockMarketplace = async () => {
+    if (!web3 || !account || wrongNetwork) return;
+    const receiver = marketplaceAccess.details?.accessReceiver;
+    if (!receiver) {
+      setMarketplaceAccess((current) => ({ ...current, state: "error", error: "The backend did not provide an access receiver address." }));
+      return;
+    }
+    try {
+      setMarketplaceAccess((current) => ({ ...current, state: "paying", error: "" }));
+      setStatus("Requesting a 1 ETH local Hardhat access payment in MetaMask...");
+      const receipt = await web3.eth.sendTransaction({ from: account, to: receiver, value: web3.utils.toWei("1", "ether") });
+      setMarketplaceAccess((current) => ({ ...current, state: "verifying" }));
+      const response = await fetch(`${BACKEND_BASE_URL}/api/marketplace-access/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ walletAddress: account, txHash: receipt.transactionHash })
+      });
+      const details = await response.json().catch(() => ({}));
+      if (!response.ok || !details.accessGranted) throw new Error(details.message || "Backend did not verify the access payment.");
+      setMarketplaceAccess({ state: "granted", details, error: "" });
+      setStatus("Marketplace access unlocked for this local backend session. NFT listings and purchases remain separate ETH marketplace actions.");
+      await refreshData();
+    } catch (error) {
+      setMarketplaceAccess((current) => ({ ...current, state: "locked", error: error.message }));
+      setStatus(`Marketplace access was not unlocked: ${error.message}`);
+    }
+  };
+
   const addresses = useMemo(() => Object.entries(config?.contracts || {}), [config]);
 
   return (
@@ -340,7 +395,10 @@ function App() {
         <article className="debug-panel"><details><summary>Local contract addresses/debug info</summary>{addresses.length ? addresses.map(([name, data]) => <p key={name}><strong>{name}:</strong> <code>{data.address}</code></p>) : <p>No contract config loaded.</p>}</details></article>
       </section>
 
-      <section className="panel"><h2>Marketplace listings</h2><p className="note">Active listings are license NFTs currently for sale with ETH. Sellers can cancel their own listings; buyers can purchase from another account.</p><div className="card-grid">{listings.length ? listings.map((license) => <LicenseCard key={license.tokenId} license={license} web3={web3} account={account} onSelect={setSelected} onBuy={buyLicense} onCancel={cancelListing} />) : <p>No active license listings found.</p>}</div></section>
+      {account && marketplaceAccess.state !== "granted" && <MarketplaceAccessGate access={marketplaceAccess} account={account} wrongNetwork={wrongNetwork} onUnlock={unlockMarketplace} />}
+
+      {marketplaceAccess.state === "granted" && <>
+      <section className="panel"><h2>Marketplace listings</h2><p className="note">Active listings are license NFTs currently for sale with ETH. This is separate from the local x402-style access fee. Sellers can cancel their own listings; buyers can purchase from another account and receive 1 PRINT after a successful purchase.</p><div className="card-grid">{listings.length ? listings.map((license) => <LicenseCard key={license.tokenId} license={license} web3={web3} account={account} onSelect={setSelected} onBuy={buyLicense} onCancel={cancelListing} />) : <p>No active license listings found.</p>}</div></section>
 
       <section className="grid two">
         <MintForm form={mintForm} setForm={setMintForm} onSubmit={mintLicense} disabled={!account || wrongNetwork || !contracts.PrintLicenseNFT} uploadStatus={uploadStatus} lastMetadata={lastMetadata} />
@@ -352,10 +410,17 @@ function App() {
       <section className="panel"><h2>Created & Sold Licenses ({createdSoldLicenses.length})</h2><p className="note">These are manufacturing/use license NFTs originally created by the connected wallet but now owned by someone else. This compact tracking section helps creators monitor circulation, resale history, and royalty-relevant events without mixing sold NFTs into owned-license controls.</p>{createdSoldLicenses.length ? <div className="sold-license-list">{createdSoldLicenses.map((license) => <CreatedSoldLicenseRow key={license.tokenId} license={license} web3={web3} onSelect={setSelected} />)}</div> : <p>No created-and-sold licenses found for the connected wallet. After another account buys one of your created NFTs, it will move out of My Owned Licenses and appear here for tracking.</p>}</section>
 
       <section className="panel"><h2>License details/history</h2>{selected ? <LicenseDetails license={selected} web3={web3} /> : <p>Select a marketplace card or owned license to view details.</p>}</section>
+      </>}
 
       <DemoHelp />
     </main>
   );
+}
+
+function MarketplaceAccessGate({ access, account, wrongNetwork, onUnlock }) {
+  const details = access.details || {};
+  const busy = access.state === "checking" || access.state === "paying" || access.state === "verifying";
+  return <section className="panel marketplace-gate"><p className="eyebrow">Local x402-style access gate</p><h2>Marketplace Access Required</h2><p>This marketplace uses a mock x402 / HTTP 402 flow. To unlock the full marketplace demo, pay 1 ETH on the local Hardhat network.</p><div className="gate-facts"><p><strong>Status:</strong> {busy ? "Checking payment status…" : "HTTP 402 Payment Required"}</p><p><strong>Required amount:</strong> {details.requiredAmount || "1 ETH"}</p><p><strong>Connected wallet:</strong> <code>{account}</code></p><p><strong>Access receiver:</strong> <code>{details.accessReceiver || "Loading from backend…"}</code></p></div><p className="warning">This local-demo access payment is separate from NFT purchases. License NFT purchases still use ETH through PrintMarketplace: 10% goes to the original creator, 90% to the seller, ownership history is recorded, and the buyer receives 1 PRINT.</p><p className="note">The backend verifies the transaction on local Hardhat RPC and remembers this wallet only in server memory. Restarting the backend locks access again. This is frontend/API-level gating, not an on-chain restriction on public contract data.</p>{access.error && <p className="error">{access.error}</p>}<button disabled={busy || wrongNetwork || !details.accessReceiver} onClick={onUnlock}>Pay 1 ETH and Unlock Marketplace</button>{wrongNetwork && <p className="error">Switch MetaMask to local Hardhat chain ID 31337 before unlocking access.</p>}</section>;
 }
 
 function DemoHelp() {
